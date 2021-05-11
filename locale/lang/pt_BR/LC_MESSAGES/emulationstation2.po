@@ -1698,3 +1698,26 @@ msgstr "EM PROGRESSO..."
 
 msgid "up/down"
 msgstr "cima/baixo"
+
+#, Adicionais
+
+msgid "SEARCH FOR"
+msgstr "PROCURAR POR"
+
+msgid "R1"
+msgstr "OMBRO DIREITO"
+
+msgid "L1"
+msgstr "OMBRO ESQUERDO"
+
+msgid "L2"
+msgstr "GATILHO ESQUERDO"
+
+msgid "R2"
+msgstr "GATILHO DIREITO"
+
+msgid "L3"
+msgstr "POLEGAR ESQUERDO"
+
+msgid "R3"
+msgstr "POLEGAR DIREITO"

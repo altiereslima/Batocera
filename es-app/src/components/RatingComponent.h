@@ -4,7 +4,6 @@
 
 #include "renderers/Renderer.h"
 #include "GuiComponent.h"
-#include "resources/Font.h"
 
 class TextureResource;
 
@@ -36,8 +35,6 @@ public:
 	virtual void applyTheme(const std::shared_ptr<ThemeData>& theme, const std::string& view, const std::string& element, unsigned int properties) override;
 
 	virtual std::vector<HelpPrompt> getHelpPrompts() override;
-	void setHorizontalAlignment(Alignment align);
-	void setUnfilledColor(unsigned int color);
 
 private:
 	void updateVertices();
@@ -49,7 +46,6 @@ private:
 
 	unsigned int mColorShift;
 	unsigned int mUnfilledColor;
-	Alignment mHorizontalAlignment;
 
 	std::shared_ptr<TextureResource> mFilledTexture;
 	std::shared_ptr<TextureResource> mUnfilledTexture;

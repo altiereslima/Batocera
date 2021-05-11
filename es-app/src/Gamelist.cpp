@@ -38,7 +38,7 @@ FileData* findOrCreateFile(SystemData* system, const std::string& path, FileType
 		return NULL;
 	}
 
-	auto pathList = Utils::FileSystem::getPathList(relative);
+	Utils::FileSystem::stringList pathList = Utils::FileSystem::getPathList(relative);
 	auto path_it = pathList.begin();
 	FolderData* treeNode = root;
 
@@ -104,28 +104,26 @@ FileData* findOrCreateFile(SystemData* system, const std::string& path, FileType
 	return NULL;
 }
 
-std::vector<FileData*> loadGamelistFile(const std::string xmlpath, SystemData* system, std::unordered_map<std::string, FileData*>& fileMap, size_t checkSize, bool fromFile)
+void loadGamelistFile (const std::string xmlpath, SystemData* system, std::unordered_map<std::string, FileData*>& fileMap, size_t checkSize = SIZE_MAX)
 {	
-	std::vector<FileData*> ret;
-
 	bool trustGamelist = Settings::getInstance()->getBool("ParseGamelistOnly");
 
 	LOG(LogInfo) << "Parsing XML file \"" << xmlpath << "\"...";
 
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = fromFile ? doc.load_file(xmlpath.c_str()) : doc.load_string(xmlpath.c_str());
+	pugi::xml_parse_result result = doc.load_file(xmlpath.c_str());
 
 	if (!result)
 	{
 		LOG(LogError) << "Error parsing XML file \"" << xmlpath << "\"!\n	" << result.description();
-		return ret;
+		return;
 	}
 
 	pugi::xml_node root = doc.child("gameList");
 	if (!root)
 	{
 		LOG(LogError) << "Could not find <gameList> node in gamelist \"" << xmlpath << "\"!";
-		return ret;
+		return;
 	}
 
 	if (checkSize != SIZE_MAX)
@@ -134,10 +132,10 @@ std::vector<FileData*> loadGamelistFile(const std::string xmlpath, SystemData* s
 		if (parentSize != checkSize)
 		{
 			LOG(LogWarning) << "gamelist size don't match !";
-			return ret;
+			return;
 		}
 	}
-
+	
 	std::string relativeTo = system->getStartPath();
 
 	for (pugi::xml_node fileNode : root.children())
@@ -167,33 +165,43 @@ std::vector<FileData*> loadGamelistFile(const std::string xmlpath, SystemData* s
 		}
 		else if (!file->isArcadeAsset())
 		{
-			std::string defaultName = file->getMetadata(MetaDataId::Name);
+			std::string defaultName = file->getMetadata().get("name");
 			file->setMetadata(MetaDataList::createFromXML(type == FOLDER ? FOLDER_METADATA : GAME_METADATA, fileNode, system));
-			file->getMetadata().migrate(file, fileNode);
 
 			//make sure name gets set if one didn't exist
-			if (file->getMetadata(MetaDataId::Name).empty())
-				file->setMetadata(MetaDataId::Name, defaultName);
+			if (file->getMetadata().get("name").empty())
+				file->setMetadata("name", defaultName);
 
-			if (!trustGamelist && !file->getHidden() && Utils::FileSystem::isHidden(path))
-				file->getMetadata().set(MetaDataId::Hidden, "true");
+			if (!file->getHidden() && Utils::FileSystem::isHidden(path))
+				file->getMetadata().set("hidden", "true");
 
 			if (checkSize != SIZE_MAX)
 				file->getMetadata().setDirty();
 			else
 				file->getMetadata().resetChangedFlag();
-
-			ret.push_back(file);
 		}
 	}
-
-	return ret;
 }
 
 void clearTemporaryGamelistRecovery(SystemData* system)
 {	
 	auto path = getGamelistRecoveryPath(system);
-	Utils::FileSystem::deleteDirectoryFiles(path, true);
+
+	auto files = Utils::FileSystem::getDirContent(path, true);
+	if (files.size() > 0)
+	{
+		for (auto file : files)
+			if (!Utils::FileSystem::isDirectory(file))
+				Utils::FileSystem::removeFile(file);
+
+		std::reverse(std::begin(files), std::end(files));
+
+		for (auto file : files)
+			if (Utils::FileSystem::isDirectory(file))
+				rmdir(file.c_str());
+	}
+
+	rmdir(path.c_str());
 }
 
 void parseGamelist(SystemData* system, std::unordered_map<std::string, FileData*>& fileMap)
@@ -202,14 +210,14 @@ void parseGamelist(SystemData* system, std::unordered_map<std::string, FileData*
 
 	auto size = Utils::FileSystem::getFileSize(xmlpath);
 	if (size != 0)
-		loadGamelistFile(xmlpath, system, fileMap, SIZE_MAX, true);
+		loadGamelistFile(xmlpath, system, fileMap);
 
 	auto files = Utils::FileSystem::getDirContent(getGamelistRecoveryPath(system), true);
 	for (auto file : files)
-		loadGamelistFile(file, system, fileMap, size, true);
+		loadGamelistFile(file, system, fileMap, size);
 
 	if (size != SIZE_MAX)
-		system->setGamelistHash(size);	
+		system->setGamelistHash(size);
 }
 
 bool addFileDataNode(pugi::xml_node& parent, const FileData* file, const char* tag, SystemData* system)
@@ -232,11 +240,7 @@ bool addFileDataNode(pugi::xml_node& parent, const FileData* file, const char* t
 
 	// there's something useful in there so we'll keep the node, add the path
 	// try and make the path relative if we can so things still work if we change the rom folder location in the future
-	std::string path = Utils::FileSystem::createRelativePath(file->getPath(), system->getStartPath(), false).c_str();
-	if (path.empty() && file->getType() == FOLDER)
-		path = ".";
-
-	newNode.prepend_child("path").text().set(path.c_str());
+	newNode.prepend_child("path").text().set(Utils::FileSystem::createRelativePath(file->getPath(), system->getStartPath(), false).c_str());
 	return true;	
 }
 
@@ -244,7 +248,7 @@ bool saveToGamelistRecovery(FileData* file)
 {
 	if (!Settings::getInstance()->getBool("SaveGamelistsOnExit"))
 		return false;
-
+	
 	pugi::xml_document doc;
 	pugi::xml_node root = doc.append_child("gameList");
 
@@ -279,28 +283,9 @@ bool saveToGamelistRecovery(FileData* file)
 	return false;
 }
 
-bool removeFromGamelistRecovery(FileData* file)
-{
-	SystemData* system = file->getSourceFileData()->getSystem();
-	if (system == nullptr)
-		return false;
-
-	std::string fp = file->getFullPath();
-	fp = Utils::FileSystem::createRelativePath(file->getFullPath(), system->getRootFolder()->getFullPath(), true);
-	fp = Utils::FileSystem::getParent(fp) + "/" + Utils::FileSystem::getStem(fp) + ".xml";
-
-	std::string path = Utils::FileSystem::getAbsolutePath(fp, getGamelistRecoveryPath(system));
-	path = Utils::FileSystem::getCanonicalPath(path);
-
-	if (Utils::FileSystem::exists(path))
-		return Utils::FileSystem::removeFile(path);
-
-	return false;
-}
-
 bool hasDirtyFile(SystemData* system)
 {
-	if (system == nullptr || !system->isGameSystem()) // || system->hasPlatformId(PlatformIds::IMAGEVIEWER))
+	if (system == nullptr || !system->isGameSystem() || system->getName() == "imageviewer")
 		return false;
 
 	FolderData* rootFolder = system->getRootFolder();
@@ -324,7 +309,7 @@ void updateGamelist(SystemData* system)
 	if(system == nullptr || Settings::getInstance()->getBool("IgnoreGamelist"))
 		return;
 
-	if (!system->isGameSystem()) // || system->hasPlatformId(PlatformIds::IMAGEVIEWER))
+	if (!system->isGameSystem() || system->getName() == "imageviewer")
 		return;
 
 	FolderData* rootFolder = system->getRootFolder();
@@ -335,9 +320,9 @@ void updateGamelist(SystemData* system)
 	}
 
 	std::vector<FileData*> dirtyFiles;
-	std::vector<FileData*> files = rootFolder->getFilesRecursive(GAME | FOLDER, false, nullptr, false);
+	std::vector<FileData*> files = rootFolder->getFilesRecursive(GAME | FOLDER);
 	for (auto file : files)
-		if (file->getSystem() == system && file->getMetadata().wasChanged())
+		if (file->getMetadata().wasChanged())
 			dirtyFiles.push_back(file);
 
 	if (dirtyFiles.size() == 0)
@@ -412,225 +397,6 @@ void updateGamelist(SystemData* system)
 		Utils::FileSystem::createDirectory(Utils::FileSystem::getParent(xmlWritePath));
 
 		LOG(LogInfo) << "Added/Updated " << numUpdated << " entities in '" << xmlReadPath << "'";
-
-		if (!doc.save_file(xmlWritePath.c_str()))
-			LOG(LogError) << "Error saving gamelist.xml to \"" << xmlWritePath << "\" (for system " << system->getName() << ")!";
-		else
-			clearTemporaryGamelistRecovery(system);
-	}
-	else
-		clearTemporaryGamelistRecovery(system);
-}
-
-
-void cleanupGamelist(SystemData* system)
-{
-	if (!system->isGameSystem() || system->isCollection()) //  || system->hasPlatformId(PlatformIds::IMAGEVIEWER)
-		return;
-
-	FolderData* rootFolder = system->getRootFolder();
-	if (rootFolder == nullptr)
-	{
-		LOG(LogError) << "CleanupGamelist : Found no root folder for system \"" << system->getName() << "\"!";
-		return;
-	}
-
-	std::string xmlReadPath = system->getGamelistPath(false);
-	if (!Utils::FileSystem::exists(xmlReadPath))
-		return;
-
-	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(xmlReadPath.c_str());
-	if (!result)
-	{
-		LOG(LogError) << "CleanupGamelist : Error parsing XML file \"" << xmlReadPath << "\"!\n	" << result.description();
-		return;
-	}
-
-	pugi::xml_node root = doc.child("gameList");
-	if (!root)
-	{
-		LOG(LogError) << "CleanupGamelist : Could not find <gameList> node in gamelist \"" << xmlReadPath << "\"!";
-		return;
-	}
-
-	std::map<std::string, FileData*> fileMap;
-	for (auto file : rootFolder->getFilesRecursive(GAME | FOLDER, false, nullptr, false))
-		fileMap[Utils::FileSystem::getCanonicalPath(file->getPath())] = file;
-
-	bool dirty = false;
-
-	std::set<std::string> knownXmlPaths;
-	std::set<std::string> knownMedias;
-
-	for (pugi::xml_node fileNode = root.first_child(); fileNode; )
-	{
-		pugi::xml_node next = fileNode.next_sibling();
-
-		pugi::xml_node path = fileNode.child("path");
-		if (!path)
-		{
-			dirty = true;
-			root.remove_child(fileNode);
-			fileNode = next;
-			continue;
-		}
-		
-		std::string gamePath = Utils::FileSystem::getCanonicalPath(Utils::FileSystem::resolveRelativePath(path.text().get(), system->getStartPath(), true));
-
-		auto file = fileMap.find(gamePath);
-		if (file == fileMap.cend())
-		{
-			dirty = true;
-			root.remove_child(fileNode);
-			fileNode = next;
-			continue;
-		}
-
-		knownXmlPaths.insert(gamePath);
-
-		for (auto mdd : MetaDataList::getMDD())
-		{
-			if (mdd.type != MetaDataType::MD_PATH)
-				continue;
-
-			pugi::xml_node mddPath = fileNode.child(mdd.key.c_str());
-
-			std::string mddFullPath = (mddPath ? Utils::FileSystem::getCanonicalPath(Utils::FileSystem::resolveRelativePath(mddPath.text().get(), system->getStartPath(), true)) : "");
-			if (!Utils::FileSystem::exists(mddFullPath))
-			{
-				std::string ext = ".jpg";
-				std::string folder = "/images/";
-				std::string suffix;
-
-				switch (mdd.id)
-				{
-				case MetaDataId::Image: suffix = "image"; break;
-				case MetaDataId::Thumbnail: suffix = "thumb"; break;
-				case MetaDataId::Marquee: suffix = "marquee"; break;
-				case MetaDataId::Video: suffix = "video"; folder = "/videos/"; ext = ".mp4"; break;
-				case MetaDataId::FanArt: suffix = "fanart"; break;
-				case MetaDataId::BoxBack: suffix = "boxback"; break;
-				case MetaDataId::BoxArt: suffix = "box"; break;
-				case MetaDataId::Wheel: suffix = "wheel"; break;
-				case MetaDataId::TitleShot: suffix = "titleshot"; break;
-				case MetaDataId::Manual: suffix = "manual"; folder = "/manuals/"; ext = ".pdf"; break;
-				case MetaDataId::Map: suffix = "map"; break;
-				case MetaDataId::Cartridge: suffix = "cartridge"; break;
-				}
-
-				if (!suffix.empty())
-				{					
-					std::string mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + "-"+ suffix + ext;
-
-					if (ext == ".pdf" && !Utils::FileSystem::exists(mediaPath))
-					{
-						mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + ".pdf";
-						if (!Utils::FileSystem::exists(mediaPath))
-							mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + ".cbz";
-					}
-					else if (ext != ".jpg" && !Utils::FileSystem::exists(mediaPath))
-						mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + ext;
-					else if (ext == ".jpg" && !Utils::FileSystem::exists(mediaPath))
-						mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + "-" + suffix + ".png";
-
-					if (mdd.id == MetaDataId::Image && !Utils::FileSystem::exists(mediaPath))
-						mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + ".jpg";
-					if (mdd.id == MetaDataId::Image && !Utils::FileSystem::exists(mediaPath))
-						mediaPath = system->getStartPath() + folder + file->second->getDisplayName() + ".png";
-
-					if (Utils::FileSystem::exists(mediaPath))
-					{
-						auto relativePath = Utils::FileSystem::createRelativePath(mediaPath, system->getStartPath(), true);
-
-						fileNode.append_child(mdd.key.c_str()).text().set(relativePath.c_str());
-
-						LOG(LogInfo) << "CleanupGamelist : Add resolved " << mdd.key << " path " << mediaPath << " to game " << gamePath << " in system " << system->getName();
-						dirty = true;
-
-						knownMedias.insert(mediaPath);
-						continue;
-					}
-				}
-
-				if (mddPath)
-				{
-					LOG(LogInfo) << "CleanupGamelist : Remove " << mdd.key << " path to game " << gamePath << " in system " << system->getName();
-
-					dirty = true;
-					fileNode.remove_child(mdd.key.c_str());
-				}
-
-				continue;
-			}
-
-			knownMedias.insert(mddFullPath);
-		}
-
-		fileNode = next;
-	}
-	
-	// iterate through all files, checking if they're already in the XML
-	for (auto file : fileMap)
-	{
-		auto fileName = file.first;
-		auto fileData = file.second;
-
-		if (knownXmlPaths.find(fileName) != knownXmlPaths.cend())
-			continue;
-
-		const char* tag = (fileData->getType() == GAME) ? "game" : "folder";
-
-		if (addFileDataNode(root, fileData, tag, system))
-		{
-			LOG(LogInfo) << "CleanupGamelist : Add " << fileName << " to system " << system->getName();
-			dirty = true;
-		}
-	}
-
-	// Cleanup unknown files in system rom path
-	auto allFiles = Utils::FileSystem::getDirContent(system->getStartPath(), true);
-	for (auto dirFile : allFiles)
-	{
-		if (knownXmlPaths.find(dirFile) != knownXmlPaths.cend())
-			continue;
-
-		if (knownMedias.find(dirFile) != knownMedias.cend())
-			continue;
-
-		if (dirFile.empty())
-			continue;
-
-		if (Utils::FileSystem::isDirectory(dirFile))
-			continue;
-
-		std::string parent = Utils::String::toLower(Utils::FileSystem::getFileName(Utils::FileSystem::getParent(dirFile)));
-		if (parent != "images" && parent != "videos" && parent != "manuals" && parent != "downloaded_images" && parent != "downloaded_videos")
-			continue;
-
-		if (Utils::FileSystem::getParent(Utils::FileSystem::getParent(dirFile)) != system->getStartPath())
-			if (Utils::FileSystem::getFileName(Utils::FileSystem::getParent(Utils::FileSystem::getParent(dirFile))) != "media")
-				continue;
-
-		std::string ext = Utils::String::toLower(Utils::FileSystem::getExtension(dirFile));
-		if (ext == ".txt" || ext == ".xml" || ext == ".old")
-			continue;
-		
-		LOG(LogInfo) << "CleanupGamelist : Remove unknown file " << dirFile << " to system " << system->getName();
-
-		Utils::FileSystem::removeFile(dirFile);
-	}
-
-	// Now write the file
-	if (dirty)
-	{
-		// Make sure the folders leading up to this path exist (or the write will fail)
-		std::string xmlWritePath(system->getGamelistPath(true));
-		Utils::FileSystem::createDirectory(Utils::FileSystem::getParent(xmlWritePath));		
-
-		std::string oldXml = xmlWritePath + ".old";
-		Utils::FileSystem::removeFile(oldXml);
-		Utils::FileSystem::copyFile(xmlWritePath, oldXml);
 
 		if (!doc.save_file(xmlWritePath.c_str()))
 			LOG(LogError) << "Error saving gamelist.xml to \"" << xmlWritePath << "\" (for system " << system->getName() << ")!";

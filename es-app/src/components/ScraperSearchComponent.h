@@ -9,8 +9,9 @@
 
 class ComponentList;
 class DateTimeEditComponent;
-class WebImageComponent;
+class ImageComponent;
 class RatingComponent;
+class ScrollableContainer;
 class TextComponent;
 
 class ScraperSearchComponent : public GuiComponent
@@ -24,7 +25,6 @@ public:
 	};
 
 	ScraperSearchComponent(Window* window, SearchType searchType = NEVER_AUTO_ACCEPT);
-	~ScraperSearchComponent();
 
 	void search(const ScraperSearchParams& params);
 	void openInputScreen(ScraperSearchParams& from);
@@ -46,12 +46,13 @@ public:
 
 private:
 	void updateViewStyle();
+	void updateThumbnail();
 	void updateInfoPane();
 
 	void resizeMetadata();
 
 	void onSearchError(const std::string& error);
-	void onSearchDone();
+	void onSearchDone(const std::vector<ScraperSearchResult>& results);
 
 	int getSelectedIndex();
 
@@ -60,9 +61,10 @@ private:
 
 	ComponentGrid mGrid;
 
-	std::shared_ptr<TextComponent> mResultName;	
+	std::shared_ptr<TextComponent> mResultName;
+	std::shared_ptr<ScrollableContainer> mDescContainer;
 	std::shared_ptr<TextComponent> mResultDesc;
-	std::shared_ptr<WebImageComponent> mResultThumbnail;
+	std::shared_ptr<ImageComponent> mResultThumbnail;
 	std::shared_ptr<ComponentList> mResultList;
 
 	std::shared_ptr<ComponentGrid> mMD_Grid;
@@ -86,38 +88,18 @@ private:
 	std::vector<MetaDataPair> mMD_Pairs;
 
 	SearchType mSearchType;
+	ScraperSearchParams mLastSearch;
 	std::function<void(const ScraperSearchResult&)> mAcceptCallback;
 	std::function<void()> mSkipCallback;
 	std::function<void()> mCancelCallback;
 	bool mBlockAccept;
 
+	std::unique_ptr<ScraperSearchHandle> mSearchHandle;
 	std::unique_ptr<MDResolveHandle> mMDResolveHandle;
-
-	/*
-	ScraperSearchParams mLastScreenScraperSearch;
-	std::unique_ptr<ScraperSearchHandle> mScreenScraperSearchHandle;
-	ScraperSearchParams mLastTheGamesDBSearch;
-	std::unique_ptr<ScraperSearchHandle> mTheGamesDBHandle;
-	std::vector<std::pair<std::string, ScraperSearchResult>> mScraperResults;
-	*/
-
-
-	class ScraperSearch
-	{
-	public:
-		std::string name;
-		std::unique_ptr<ScraperSearchHandle> searchHandle;
-
-		ScraperSearchParams params;
-		std::vector<ScraperSearchResult> results;
-	};
-
-	std::vector<ScraperSearch*> mScrapEngines;
-	ScraperSearchParams mInitialSearch;
+	std::vector<ScraperSearchResult> mScraperResults;
+	std::unique_ptr<HttpReq> mThumbnailReq;
 
 	BusyComponent mBusyAnim;
-	int			  mInfoPaneCursor;
-
 };
 
 #endif // ES_APP_COMPONENTS_SCRAPER_SEARCH_COMPONENT_H

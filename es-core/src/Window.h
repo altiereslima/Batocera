@@ -59,53 +59,48 @@ public:
 	void update(int deltaTime);
 	void render();
 
-	bool init(bool initRenderer = true);
-	void deinit(bool deinitRenderer = true);
+	bool init();
+	void deinit();
 
 	void normalizeNextUpdate();
 
 	inline bool isSleeping() const { return mSleeping; }
 	bool getAllowSleep();
 	void setAllowSleep(bool sleep);
-	
-	// Splash screen
-	void setCustomSplashScreen(std::string imagePath, std::string customText);
-	void renderSplashScreen(std::string text, float percent = -1, float opacity = 1);
-	void renderSplashScreen(float opacity = 1, bool swapBuffers = true);
-	void closeSplashScreen();
+
+	void renderLoadingScreen(std::string text, float percent = -1, unsigned char opacity = 255);
+	void endRenderLoadingScreen();
 
 	void renderHelpPromptsEarly(); // used to render HelpPrompts before a fade
 	void setHelpPrompts(const std::vector<HelpPrompt>& prompts, const HelpStyle& style);
 
 	void setScreenSaver(ScreenSaver* screenSaver) { mScreenSaver = screenSaver; }
 
-	void stopNotificationPopups();
+	void stopInfoPopup();
 
 	void startScreenSaver();
 	bool cancelScreenSaver();
 	void renderScreenSaver();
 
-	void postToUiThread(const std::function<void()>& func);
+	void registerNotificationComponent(AsyncNotificationComponent* pc);
+	void unRegisterNotificationComponent(AsyncNotificationComponent* pc);
+
+	void postToUiThread(const std::function<void(Window*)>& func);
 	void reactivateGui();
 
 	void onThemeChanged(const std::shared_ptr<ThemeData>& theme);
 
 	std::shared_ptr<BatteryIndicatorComponent>	getBatteryIndicator() { return mBatteryIndicator; }
 
-	AsyncNotificationComponent* createAsyncNotificationComponent(bool actionLine = false);
-
 private:
 	void processPostedFunctions();
 
+	void renderRegisteredNotificationComponents(const Transform4x4f& trans);
 	std::vector<AsyncNotificationComponent*> mAsyncNotificationComponent;
-	void updateAsyncNotifications(int deltaTime);
-	void renderAsyncNotifications(const Transform4x4f& trans);
-	
-	std::vector<std::function<void()>> mFunctions;
 
-	std::vector<GuiInfoPopup*> mNotificationPopups;
-	void updateNotificationPopups(int deltaTime);
-	void layoutNotificationPopups();
+
+	std::vector<std::function<void(Window*)>> mFunctions;
+
 
 	void processNotificationMessages();
 	void processSongTitleNotifications();
@@ -118,9 +113,10 @@ private:
 
 	HelpComponent*	mHelp;
 	ImageComponent* mBackgroundOverlay;
-	ScreenSaver*	mScreenSaver;	
+	ScreenSaver*	mScreenSaver;
+	GuiInfoPopup*	mInfoPopup;
 	bool			mRenderScreenSaver;
-
+	
 	std::vector<GuiComponent*> mScreenExtras;
 	std::vector<GuiComponent*> mGuiStack;
 
@@ -150,6 +146,7 @@ private:
 
 	bool mRenderedHelpPrompts;
 
+	GuiComponent* mTransiting;
 	int mTransitionOffset;
 };
 

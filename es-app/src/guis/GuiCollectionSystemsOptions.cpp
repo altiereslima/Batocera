@@ -10,10 +10,7 @@
 #include "views/ViewController.h"
 #include "CollectionSystemManager.h"
 #include "Window.h"
-#include "GuiMenu.h"
-#include "ApiSystem.h"
-#include "GuiGamelistFilter.h"
-#include "views/gamelist/IGameListView.h"
+
 
 GuiCollectionSystemsOptions::GuiCollectionSystemsOptions(Window* window) 
 	: GuiSettings(window, _("GAME COLLECTION SETTINGS").c_str())
@@ -23,67 +20,6 @@ GuiCollectionSystemsOptions::GuiCollectionSystemsOptions(Window* window)
 
 void GuiCollectionSystemsOptions::initializeMenu()
 {
-	addGroup(_("COLLECTIONS TO DISPLAY"));
-
-	// SYSTEMS DISPLAYED
-	auto hiddenSystems = Utils::String::split(Settings::getInstance()->getString("HiddenSystems"), ';');
-	auto displayedSystems = std::make_shared<OptionListComponent<SystemData*>>(mWindow, _("SYSTEMS DISPLAYED"), true);
-
-	if (SystemData::isManufacturerSupported() && Settings::getInstance()->getString("SortSystems") == "manufacturer")
-	{
-		std::string man;
-		for (auto system : SystemData::sSystemVector)
-		{
-			if (system->isCollection() || system->isGroupChildSystem())
-				continue;
-
-			if (man != system->getSystemMetadata().manufacturer)
-			{
-				displayedSystems->addGroup(system->getSystemMetadata().manufacturer);
-				man = system->getSystemMetadata().manufacturer;
-			}
-
-			displayedSystems->add(system->getFullName(), system, std::find(hiddenSystems.cbegin(), hiddenSystems.cend(), system->getName()) == hiddenSystems.cend());
-		}
-	}
-	else
-	{
-		for (auto system : SystemData::sSystemVector)
-			if (!system->isCollection() && !system->isGroupChildSystem())
-				displayedSystems->add(system->getFullName(), system, std::find(hiddenSystems.cbegin(), hiddenSystems.cend(), system->getName()) == hiddenSystems.cend());
-	}
-
-	addWithLabel(_("SYSTEMS DISPLAYED"), displayedSystems);
-	addSaveFunc([this, displayedSystems]
-	{
-		std::string hiddenSystems;
-
-		std::vector<SystemData*> sys = displayedSystems->getSelectedObjects();
-
-		for (auto system : SystemData::sSystemVector)
-		{
-			if (system->isCollection() || system->isGroupChildSystem())
-				continue;
-
-			if (std::find(sys.cbegin(), sys.cend(), system) == sys.cend())
-			{
-				if (hiddenSystems.empty())
-					hiddenSystems = system->getName();
-				else
-					hiddenSystems = hiddenSystems + ";" + system->getName();
-			}
-		}
-
-		if (Settings::getInstance()->setString("HiddenSystems", hiddenSystems))
-		{
-			Settings::getInstance()->saveFile();
-			setVariable("reloadSystems", true);
-		}
-	});
-
-	// get collections
-	addSystemsToMenu();
-
 	auto groupNames = SystemData::getAllGroupNames();
 	if (groupNames.size() > 0)
 	{
@@ -116,19 +52,20 @@ void GuiCollectionSystemsOptions::initializeMenu()
 		});
 	}
 
-	addGroup(_("CREATE CUSTOM COLLECTION"));
+	// get collections
+	addSystemsToMenu();
 
 	// add "Create New Custom Collection from Theme"
 	std::vector<std::string> unusedFolders = CollectionSystemManager::get()->getUnusedSystemsFromTheme();
 	if (unusedFolders.size() > 0)
 	{
-		addEntry(_("CREATE NEW CUSTOM COLLECTION FROM THEME").c_str(), true, [this, unusedFolders] 
-	    {
-			auto s = new GuiSettings(mWindow, _("SELECT THEME FOLDER").c_str());
-		    std::shared_ptr< OptionListComponent<std::string> > folderThemes = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SELECT THEME FOLDER"), true);
+	  addEntry(_("CREATE NEW CUSTOM COLLECTION FROM THEME").c_str(), true,
+		[this, unusedFolders] {
+		     auto s = new GuiSettings(mWindow, _("SELECT THEME FOLDER").c_str());
+		     std::shared_ptr< OptionListComponent<std::string> > folderThemes = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SELECT THEME FOLDER"), true);
 
 			// add Custom Systems
-			for(auto it = unusedFolders.cbegin() ; it != unusedFolders.cend() ; it++)
+			for(auto it = unusedFolders.cbegin() ; it != unusedFolders.cend() ; it++ )
 			{
 				ComponentListRow row;
 				std::string name = *it;
@@ -154,99 +91,15 @@ void GuiCollectionSystemsOptions::initializeMenu()
 		window->removeGui(topGui);
 		createCollection(name);
 	};
-	addEntry(_("CREATE NEW EDITABLE COLLECTION").c_str(), true, [this, createCustomCollection] 
-	{
-		if (Settings::getInstance()->getBool("UseOSK"))
+	addEntry(_("CREATE NEW CUSTOM COLLECTION").c_str(), true, [this, createCustomCollection] {
+		if (Settings::getInstance()->getBool("UseOSK")) {
 			mWindow->pushGui(new GuiTextEditPopupKeyboard(mWindow, _("New Collection Name"), "", createCustomCollection, false));
-		else
-			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("New Collection Name"), "", createCustomCollection, false));		
-	});
-
-	auto createDynCollection = [this](const std::string& newVal) { createFilterCollection(newVal); };
-
-	addEntry(_("CREATE NEW DYNAMIC COLLECTION").c_str(), true, [this, createDynCollection]
-	{
-		if (Settings::getInstance()->getBool("UseOSK"))
-			mWindow->pushGui(new GuiTextEditPopupKeyboard(mWindow, _("New Collection Name"), "", createDynCollection, false));
-		else
-			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("New Collection Name"), "", createDynCollection, false));
-	});
-
-	addGroup(_("OPTIONS"));
-
-	// SORT COLLECTIONS AND SYSTEMS
-	std::string sortMode = Settings::getInstance()->getString("SortSystems");
-
-	auto sortType = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SORT COLLECTIONS AND SYSTEMS"), false);
-	sortType->add(_("NO"), "", sortMode.empty());
-	sortType->add(_("ALPHABETICALLY"), "alpha", sortMode == "alpha");
-
-	if (SystemData::isManufacturerSupported())
-	{
-		sortType->add(_("BY MANUFACTURER"), "manufacturer", sortMode == "manufacturer");
-		sortType->add(_("BY HARDWARE TYPE"), "hardware", sortMode == "hardware");
-		sortType->add(_("BY RELEASE YEAR"), "releaseDate", sortMode == "releaseDate");
-	}
-
-	if (!sortType->hasSelection())
-		sortType->selectFirstItem();
-	
-	addWithLabel(_("SORT SYSTEMS"), sortType);
-	addSaveFunc([this, sortType]
-	{
-		if (Settings::getInstance()->setString("SortSystems", sortType->getSelected()))
-			setVariable("reloadAll", true);
-	});
-	
-	// START ON SYSTEM
-	std::string startupSystem = Settings::getInstance()->getString("StartupSystem");
-
-	auto systemfocus_list = std::make_shared< OptionListComponent<std::string> >(mWindow, _("START ON SYSTEM"), false);
-	systemfocus_list->add(_("NONE"), "", startupSystem == "");
-	systemfocus_list->add(_("RESTORE LAST SELECTED"), "lastsystem", startupSystem == "lastsystem");
-
-	if (SystemData::isManufacturerSupported() && Settings::getInstance()->getString("SortSystems") == "manufacturer")
-	{
-		std::string man;
-		for (auto system : SystemData::sSystemVector)
-		{
-			if (!system->isVisible())
-				continue;
-
-			if (man != system->getSystemMetadata().manufacturer)
-			{
-				systemfocus_list->addGroup(system->getSystemMetadata().manufacturer);
-				man = system->getSystemMetadata().manufacturer;
-			}
-
-			systemfocus_list->add(system->getName(), system->getName(), startupSystem == system->getName());
 		}
-	}
-	else
-	{
-		for (auto system : SystemData::sSystemVector)
-			if (system->isVisible())
-				systemfocus_list->add(system->getName(), system->getName(), startupSystem == system->getName());
-	}
-
-	if (!systemfocus_list->hasSelection())
-		systemfocus_list->selectFirstItem();
-
-	addWithLabel(_("START ON SYSTEM"), systemfocus_list);
-	addSaveFunc([systemfocus_list] 
-	{ 
-		Settings::getInstance()->setString("StartupSystem", systemfocus_list->getSelected()); 
-		Settings::getInstance()->setString("LastSystem", "");
+		else {
+			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("New Collection Name"), "", createCustomCollection, false));
+		}
 	});
 
-	// START ON GAMELIST
-	auto startOnGamelist = std::make_shared<SwitchComponent>(mWindow);
-	startOnGamelist->setState(Settings::getInstance()->getBool("StartupOnGameList"));
-	addWithLabel(_("START ON GAMELIST"), startOnGamelist);
-	addSaveFunc([startOnGamelist] { Settings::getInstance()->setBool("StartupOnGameList", startOnGamelist->getState()); });
-
-
-	// GROUP UNTHEMED CUSTOM COLLECTIONS
 	std::shared_ptr<SwitchComponent> bundleCustomCollections = std::make_shared<SwitchComponent>(mWindow);
 	bundleCustomCollections->setState(Settings::getInstance()->getBool("UseCustomCollectionsSystem"));
 	addWithLabel(_("GROUP UNTHEMED CUSTOM COLLECTIONS"), bundleCustomCollections);
@@ -256,9 +109,6 @@ void GuiCollectionSystemsOptions::initializeMenu()
 			setVariable("reloadAll", true);
 	});
 
-	/*
-
-
 	std::shared_ptr<SwitchComponent> sortAllSystemsSwitch = std::make_shared<SwitchComponent>(mWindow);
 	sortAllSystemsSwitch->setState(Settings::getInstance()->getBool("SortAllSystems"));
 	addWithLabel(_("SORT CUSTOM COLLECTIONS AND SYSTEMS"), sortAllSystemsSwitch);
@@ -267,36 +117,21 @@ void GuiCollectionSystemsOptions::initializeMenu()
 		if (Settings::getInstance()->setBool("SortAllSystems", sortAllSystemsSwitch->getState()))
 			setVariable("reloadAll", true);
 	});
-	*/
+	
 	std::shared_ptr<SwitchComponent> toggleSystemNameInCollections = std::make_shared<SwitchComponent>(mWindow);
 	toggleSystemNameInCollections->setState(Settings::getInstance()->getBool("CollectionShowSystemInfo"));
 	addWithLabel(_("SHOW SYSTEM NAME IN COLLECTIONS"), toggleSystemNameInCollections);
 	addSaveFunc([this, toggleSystemNameInCollections]
 	{
 		if (Settings::getInstance()->setBool("CollectionShowSystemInfo", toggleSystemNameInCollections->getState()))
-		{
-			SystemData::resetSettings();
-			FileData::resetSettings();
 			setVariable("reloadAll", true);
-		}
 	});
 
-	std::shared_ptr<SwitchComponent> alsoHideGames = std::make_shared<SwitchComponent>(mWindow);
-	alsoHideGames->setState(Settings::getInstance()->getBool("HiddenSystemsShowGames"));
-	addWithLabel(_("SHOW GAMES OF HIDDEN SYSTEMS IN COLLECTIONS"), alsoHideGames);
-	addSaveFunc([this, alsoHideGames]
-	{
-		if (Settings::getInstance()->setBool("HiddenSystemsShowGames", alsoHideGames->getState()))
-		{
-			FileData::resetSettings();
-			setVariable("reloadSystems", true);
-		}
-	});
+
 	
-#if defined(WIN32) && !defined(_DEBUG)		
-	if (!ApiSystem::getInstance()->isScriptingSupported(ApiSystem::GAMESETTINGS))
-		addEntry(_("UPDATE GAMES LISTS"), false, [this] { GuiMenu::updateGameLists(mWindow); }); // Game List Update
-#endif		
+
+	if(CollectionSystemManager::get()->isEditing())
+		addEntry((_("FINISH EDITING COLLECTION") + " : " + Utils::String::toUpper(CollectionSystemManager::get()->getEditingCollection())).c_str(), false, std::bind(&GuiCollectionSystemsOptions::exitEditMode, this));
 	
 	addSaveFunc([this]
 	{
@@ -315,7 +150,7 @@ void GuiCollectionSystemsOptions::initializeMenu()
 		if (getVariable("reloadSystems"))
 		{
 			Window* window = mWindow;
-			window->renderSplashScreen(_("Loading..."));
+			window->renderLoadingScreen(_("Loading..."));
 
 			ViewController::get()->goToStart();
 			delete ViewController::get();
@@ -332,7 +167,7 @@ void GuiCollectionSystemsOptions::initializeMenu()
 					delete gui;
 			}
 			ViewController::get()->reloadAll(nullptr, false); // Avoid reloading themes a second time
-			window->closeSplashScreen();
+			window->endRenderLoadingScreen();
 
 			window->pushGui(ViewController::get());
 		}
@@ -344,7 +179,7 @@ void GuiCollectionSystemsOptions::initializeMenu()
 			CollectionSystemManager::get()->updateSystemsList();
 			ViewController::get()->goToStart();
 			ViewController::get()->reloadAll(mWindow);
-			mWindow->closeSplashScreen();
+			mWindow->endRenderLoadingScreen();
 		}
 	});
 }
@@ -361,62 +196,18 @@ void GuiCollectionSystemsOptions::createCollection(std::string inName)
 
 	ViewController::get()->goToSystemView(newSys);
 
-	// Make sure the physical file is created
-	CollectionSystemManager::get()->saveCustomCollection(newSys);
-
 	Window* window = mWindow;
+	CollectionSystemManager::get()->setEditMode(name);
 	while(window->peekGui() && window->peekGui() != ViewController::get())
 		delete window->peekGui();
+
+	return;
 }
 
-void GuiCollectionSystemsOptions::createFilterCollection(std::string inName)
+void GuiCollectionSystemsOptions::exitEditMode()
 {
-	std::string name = CollectionSystemManager::get()->getValidNewCollectionName(inName);
-	if (name.empty())
-		return;
-
-	CollectionFilter cf;
-	cf.create(name);
-	
-	SystemData* newSys = CollectionSystemManager::get()->addNewCustomCollection(name);
-
-	std::string setting = Settings::getInstance()->getString("CollectionSystemsCustom");
-	setting = setting.empty() ? name : setting + "," + name;
-	if (Settings::getInstance()->setString("CollectionSystemsCustom", setting))
-		Settings::getInstance()->saveFile();
-		
-	CollectionSystemManager::get()->loadEnabledListFromSettings();
-	CollectionSystemManager::get()->updateSystemsList();
-	ViewController::get()->reloadAll(nullptr, false);
-	ViewController::get()->goToStart();
-
-	std::map<std::string, CollectionSystemData> customCollections = CollectionSystemManager::get()->getCustomCollectionSystems();
-	auto customCollection = customCollections.find(name);
-	if (customCollection == customCollections.cend())
-		return;
-
-	Window* window = mWindow;
-
-	GuiComponent* topGui = window->peekGui();
-	if (topGui != nullptr)
-		window->removeGui(topGui);
-
-	while (window->peekGui() && window->peekGui() != ViewController::get())
-		delete window->peekGui();
-
-	GuiGamelistFilter* ggf = new GuiGamelistFilter(window, customCollection->second.filteredIndex);
-	
-	ggf->onFinalize([name, newSys, window]()
-	{
-		window->renderSplashScreen();
-
-		CollectionSystemManager::get()->reloadCollection(name, false);						
-		ViewController::get()->goToGameList(newSys, true);
-
-		window->closeSplashScreen();
-	});
-	
-	window->pushGui(ggf);
+	CollectionSystemManager::get()->exitEditMode();
+	close();
 }
 
 GuiCollectionSystemsOptions::~GuiCollectionSystemsOptions()
@@ -430,11 +221,8 @@ void GuiCollectionSystemsOptions::addSystemsToMenu()
 	std::map<std::string, CollectionSystemData> &autoSystems = CollectionSystemManager::get()->getAutoCollectionSystems();
 
 	autoOptionList = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SELECT COLLECTIONS"), true);
-	autoOptionList->addGroup(_("AUTOMATIC COLLECTIONS"));
 
 	bool hasGroup = false;
-
-	auto arcadeGames = CollectionSystemManager::get()->getArcadeCollection()->getRootFolder()->getFilesRecursive(GAME);
 
 	// add Auto Systems && preserve order
 	for (auto systemDecl : CollectionSystemManager::getSystemDecls())
@@ -447,24 +235,11 @@ void GuiCollectionSystemsOptions::addSystemsToMenu()
             autoOptionList->add(it->second.decl.longName, it->second.decl.name, it->second.isEnabled);
         else
         {
-			bool hasGames = false;
+            if (!it->second.isPopulated)
+                CollectionSystemManager::get()->populateAutoCollection(&(it->second));
 
-			if (it->second.isPopulated)
-				hasGames = it->second.system->getRootFolder()->getChildren().size() > 0;
-			else
-			{
-				for (auto file : arcadeGames)
-				{
-					if (file->getMetadata(MetaDataId::ArcadeSystemName) == systemDecl.themeFolder)
-					{
-						hasGames = true;
-						break;
-					}
-				}
-			}
-
-			if (!hasGames)
-				continue;
+			if (it->second.system->getRootFolder()->getChildren().size() == 0)
+                continue;
 
 			if (!hasGroup)
 			{
@@ -481,20 +256,12 @@ void GuiCollectionSystemsOptions::addSystemsToMenu()
 
 	customOptionList = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SELECT COLLECTIONS"), true);
 
-	customOptionList->addGroup(_("EDITABLE COLLECTIONS"));
-
-	for (auto sys : customSystems)
-		if (sys.second.filteredIndex == nullptr)
-			customOptionList->add(sys.second.decl.longName, sys.second.decl.name, sys.second.isEnabled);
-
-	customOptionList->addGroup(_("DYNAMIC COLLECTIONS"));
-
-	for (auto sys : customSystems)
-		if (sys.second.filteredIndex != nullptr)
-			customOptionList->add(sys.second.decl.longName, sys.second.decl.name, sys.second.isEnabled);
-
-	if (customOptionList->size() > 0)
-		addWithLabel(_("CUSTOM GAME COLLECTIONS"), customOptionList);
+	// add Custom Systems
+	for(std::map<std::string, CollectionSystemData>::const_iterator it = customSystems.cbegin() ; it != customSystems.cend() ; it++ )
+	{
+		customOptionList->add(it->second.decl.longName, it->second.decl.name, it->second.isEnabled);
+	}
+	addWithLabel(_("CUSTOM GAME COLLECTIONS"), customOptionList);
 }
 
 void GuiCollectionSystemsOptions::updateSettings(std::string newAutoSettings, std::string newCustomSettings)
@@ -506,8 +273,8 @@ void GuiCollectionSystemsOptions::updateSettings(std::string newAutoSettings, st
 	{
 		Settings::getInstance()->saveFile();
 		CollectionSystemManager::get()->loadEnabledListFromSettings();
-		CollectionSystemManager::get()->updateSystemsList();		
-		ViewController::get()->reloadAll();
+		CollectionSystemManager::get()->updateSystemsList();
 		ViewController::get()->goToStart();
+		ViewController::get()->reloadAll();
 	}
 }

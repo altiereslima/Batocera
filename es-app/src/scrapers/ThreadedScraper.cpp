@@ -12,50 +12,23 @@
 ThreadedScraper* ThreadedScraper::mInstance = nullptr;
 bool ThreadedScraper::mPaused = false;
 
-ThreadedScraper::ThreadedScraper(Window* window, const std::queue<ScraperSearchParams>& searches, int threadCount)
+ThreadedScraper::ThreadedScraper(Window* window, const std::queue<ScraperSearchParams>& searches)
 	: mSearchQueue(searches), mWindow(window)
 {
-	mExitCode = ASYNC_IN_PROGRESS;
+	mExit = false;
 	mTotal = (int) mSearchQueue.size();
 
-	mWndNotification = mWindow->createAsyncNotificationComponent();
-	mWndNotification->updateTitle(GUIICON + _("SCRAPING"));
+	mWndNotification = new AsyncNotificationComponent(window);
 
-	for (int i = 0; i < threadCount; i++)
-	{
-		if (mSearchQueue.size() == 0)
-			break;
-
-		ScraperThread* thread = new ScraperThread(i);
-		mScraperThreads.push_back(thread);
-		ProcessNextGame(thread);
-	}	
-
+	mWindow->registerNotificationComponent(mWndNotification);
+	search(mSearchQueue.front());
 	mHandle = new std::thread(&ThreadedScraper::run, this);	
-}
-
-void ThreadedScraper::ProcessNextGame(ScraperThread* thread)
-{
-	auto item = mSearchQueue.front();
-	mSearchQueue.pop();
-	mCurrentGame = item.getGameName();
-
-	LOG(LogInfo) << "[Thread " << thread->mThreadId << "] ProcessNextGame : " << mCurrentGame;
-
-	thread->run(item);
-
-	updateUI();
 }
 
 ThreadedScraper::~ThreadedScraper()
 {
-	mWndNotification->close();
-	mWndNotification = nullptr;
-
-	for (auto scraperThread : mScraperThreads)
-		delete scraperThread;
-
-	mScraperThreads.clear();
+	mWindow->unRegisterNotificationComponent(mWndNotification);
+	delete mWndNotification;
 
 	ThreadedScraper::mInstance = nullptr;
 }
@@ -65,75 +38,25 @@ std::string ThreadedScraper::formatGameName(FileData* game)
 	return "["+game->getSystemName()+"] " + game->getName();
 }
 
-ScraperThread::ScraperThread(int threadId)
+void ThreadedScraper::search(const ScraperSearchParams& params)
 {
-	mThreadId = threadId;
-	mErrorStatus = 0;
-	mStatus = ASYNC_IN_PROGRESS;
-}
+	LOG(LogDebug) << "ThreadedScraper::formatGameName";
 
-void ScraperThread::run(const ScraperSearchParams& params)
-{
-	mResult = ScraperSearchResult();
-	mErrorStatus = 0;
-	mStatusString = "";
-	mStatus = ASYNC_IN_PROGRESS;
-	mSearch = params;
-	mMDResolveHandle.reset();
+	std::string gameName = formatGameName(params.game);
 
-	mSearchHandle = Scraper::getScraper()->search(params);
-}
+	LOG(LogInfo) << "ThreadedScraper::search >> " << gameName;
 
-int ScraperThread::updateState()
-{
-	if (mSearchHandle && mSearchHandle->status() != ASYNC_IN_PROGRESS)
-	{
-		auto status = mSearchHandle->status();
-		auto results = mSearchHandle->getResults();
-		auto statusString = mSearchHandle->getStatusString();
-		auto httpCode = mSearchHandle->getErrorCode();
+	mCurrentAction = "";
+	mLastSearch = params;
+	mSearchHandle = startScraperSearch(params);
 
-		LOG(LogInfo) << "[Thread " << mThreadId << "] ThreadedScraper::SearchResponse : " << httpCode << " " << statusString;
+	std::string idx = std::to_string(mTotal + 1 - mSearchQueue.size()) + "/" + std::to_string(mTotal);
 
-		mSearchHandle.reset();
+	mWndNotification->updateTitle(GUIICON + _("SCRAPING") + "... " + idx);
+	mWndNotification->updateText(gameName, _("Searching")+"...");
+	mWndNotification->updatePercent(-1);
 
-		if (status == ASYNC_DONE)
-		{
-			if (results.size() > 0)
-			{
-				if (results[0].hasMedia())
-					mMDResolveHandle = results[0].resolveMetaDataAssets(mSearch);
-				else
-					acceptResult(results[0]);
-			}
-			else
-			{
-				mStatus = ASYNC_DONE;
-				mErrorStatus = 0;
-			}
-		}
-		else if (status == ASYNC_ERROR)
-			processError(httpCode, statusString);
-	}
-
-	if (mMDResolveHandle && mMDResolveHandle->status() != ASYNC_IN_PROGRESS)
-	{
-		auto status = mMDResolveHandle->status();
-		auto result = mMDResolveHandle->getResult();
-		auto statusString = mMDResolveHandle->getStatusString();
-		auto httpCode = mMDResolveHandle->getErrorCode();
-
-		LOG(LogInfo) << "[Thread " << mThreadId << "] ResolveResponse : " << statusString;
-
-		mMDResolveHandle.reset();
-
-		if (status == ASYNC_DONE)
-			acceptResult(result);
-		else if (status == ASYNC_ERROR)
-			processError(httpCode, statusString);
-	}
-
-	return mStatus;
+	LOG(LogDebug) << "ThreadedScraper::search <<";
 }
 
 void ThreadedScraper::processError(int status, const std::string statusString)
@@ -142,9 +65,8 @@ void ThreadedScraper::processError(int status, const std::string statusString)
 		status == HttpReq::REQ_426_BLACKLISTED || status == HttpReq::REQ_FILESTREAM_ERROR || status == HttpReq::REQ_426_SERVERMAINTENANCE ||
 		status == HttpReq::REQ_403_BADLOGIN || status == HttpReq::REQ_401_FORBIDDEN)
 	{
-		mExitCode = ASYNC_ERROR;
-		Window* w = mWindow;
-		mWindow->postToUiThread([statusString, w]() { w->pushGui(new GuiMsgBox(w, _("SCRAPE FAILED") + " : " + statusString)); });
+		mExit = true;
+		mWindow->postToUiThread([statusString](Window* w) { w->pushGui(new GuiMsgBox(w, _("SCRAPE FAILED") + " : " + statusString)); });
 	}
 	else
 		mErrors.push_back(statusString);
@@ -152,97 +74,117 @@ void ThreadedScraper::processError(int status, const std::string statusString)
 
 void ThreadedScraper::run()
 {
-	while (mExitCode == ASYNC_IN_PROGRESS)
+	while (!mExit && !mSearchQueue.empty())
 	{
 		if (mPaused)
 		{
-			while (mExitCode == ASYNC_IN_PROGRESS && mPaused)
+			while (!mExit && mPaused)
 			{
 				std::this_thread::yield();
 				std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			}
 		}
-		
-		for (auto iter = mScraperThreads.cbegin(); iter != mScraperThreads.cend(); ++iter)
+
+		if (mSearchHandle && mSearchHandle->status() != ASYNC_IN_PROGRESS)
 		{
-			if (mExitCode != ASYNC_IN_PROGRESS)
-				break;
+			auto status = mSearchHandle->status();
+			auto results = mSearchHandle->getResults();
+			auto statusString = mSearchHandle->getStatusString();
+			auto httpCode = mSearchHandle->getErrorCode();
 
-			auto mScraperThread = *iter;
+			LOG(LogDebug) << "ThreadedScraper::SearchResponse : " << httpCode << " " << statusString;
 
-			int state = mScraperThread->updateState();
-			switch (state)
+			mSearchHandle.reset();
+
+			if (status == ASYNC_DONE)
 			{
-			case ASYNC_DONE:
-				acceptResult(*mScraperThread);
-				break;
-
-			case ASYNC_ERROR:
-				processError(mScraperThread->getError(), mScraperThread->getErrorString());
-				break;
-
-			default:
-				//std::this_thread::yield();
-				// std::this_thread::sleep_for(std::chrono::milliseconds(10));
-				break;
-			}
-
-			if (mExitCode == ASYNC_IN_PROGRESS && state != ASYNC_IN_PROGRESS)
-			{
-				if (!mSearchQueue.empty())
-					ProcessNextGame(mScraperThread);
-				else
-				{					
-					mScraperThreads.erase(iter);
-					if (mScraperThreads.size() == 0)
-					{
-						mExitCode = ASYNC_DONE;
-						LOG(LogDebug) << "ThreadedScraper::finished";
-					}
-					break;
+				if (results.size() > 0)
+				{
+					if (results[0].hadMedia())
+						processMedias(results[0]);
+					else
+						acceptResult(results[0]);
 				}
 			}
+			else if (status == ASYNC_ERROR)
+				processError(httpCode, statusString);				
+		}
+
+		if (mMDResolveHandle && mMDResolveHandle->status() != ASYNC_IN_PROGRESS)
+		{
+			auto status = mMDResolveHandle->status();
+			auto result = mMDResolveHandle->getResult();
+			auto statusString = mMDResolveHandle->getStatusString();
+			auto httpCode = mMDResolveHandle->getErrorCode();
+
+			LOG(LogDebug) << "ThreadedScraper::ResolveResponse : " << statusString;
+
+			mCurrentAction = "";
+			mMDResolveHandle.reset();
+
+			if (status == ASYNC_DONE)
+				acceptResult(result);
+			else if (status == ASYNC_ERROR)
+				processError(httpCode, statusString);
+		}
+
+		if (mMDResolveHandle && mMDResolveHandle->status() == ASYNC_IN_PROGRESS)
+		{
+			std::string action = mMDResolveHandle->getCurrentItem();
+			if (action != mCurrentAction)
+			{
+				mCurrentAction = action;
+				mWndNotification->updateText(formatGameName(mLastSearch.game), _("Downloading") + " " + mCurrentAction);
+			}
+
+			mWndNotification->updatePercent(mMDResolveHandle->getPercent());
+		}
+
+		if (mSearchHandle == nullptr && mMDResolveHandle == nullptr)
+		{
+			mSearchQueue.pop();
+
+			if (mSearchQueue.empty())
+			{
+				LOG(LogDebug) << "ThreadedScraper::finished";
+				break;
+			}
+			
+			search(mSearchQueue.front());
+		}
+		else
+		{
+			std::this_thread::yield();
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 	}
 	
-	if (mExitCode == ASYNC_DONE)
-		mWindow->displayNotificationMessage(GUIICON + _("SCRAPING FINISHED") + std::string(". ") + _("UPDATE GAMES LISTS TO APPLY CHANGES."));
+	if (!mExit)
+		mWindow->displayNotificationMessage(GUIICON + _("SCRAPING FINISHED. REFRESH UPDATE GAMES LISTS TO APPLY CHANGES."));
 
 	delete this;
 	ThreadedScraper::mInstance = nullptr;
 }
 
-void ThreadedScraper::updateUI()
+void ThreadedScraper::processMedias(ScraperSearchResult result)
 {
-	int remaining = mTotal + 1 - mSearchQueue.size() - mScraperThreads.size();
-	if (remaining < 0)
-		remaining = 0;
-
-	std::string idx = std::to_string(remaining) + "/" + std::to_string(mTotal);	
-	int percentDone = remaining * 100 / (mTotal + 1);
-
-	mWndNotification->updateTitle(GUIICON + _("SCRAPING") + " " + idx);
-	mWndNotification->updateText(mCurrentGame);
-	mWndNotification->updatePercent(percentDone);
+	LOG(LogDebug) << "ThreadedScraper::processMedias >>";
+	mMDResolveHandle = resolveMetaDataAssets(result, mLastSearch);
+	LOG(LogDebug) << "ThreadedScraper::processMedias <<";
 }
 
-void ThreadedScraper::acceptResult(ScraperThread& thread)
+void ThreadedScraper::acceptResult(const ScraperSearchResult& result)
 {
 	LOG(LogDebug) << "ThreadedScraper::acceptResult >>";
 
-	ScraperSearchResult& result = thread.getResult();
-	if (result.mdl.getName().empty())
-		return;
+	ScraperSearchParams& search = mSearchQueue.front();
 
-	ScraperSearchParams& search = thread.getSearchParams();
 	auto game = search.game;
 
-	mWindow->postToUiThread([game, result]()
+	mWindow->postToUiThread([game, result](Window* w)
 	{
 		LOG(LogDebug) << "ThreadedScraper::importScrappedMetadata";
-		game->importP2k(result.p2k);
 		game->getMetadata().importScrappedMetadata(result.mdl);
-		game->detectLanguageAndRegion(true);
 
 		LOG(LogDebug) << "ThreadedScraper::saveToGamelistRecovery";
 		saveToGamelistRecovery(game);
@@ -256,18 +198,7 @@ void ThreadedScraper::start(Window* window, const std::queue<ScraperSearchParams
 	if (ThreadedScraper::mInstance != nullptr)
 		return;
 
-	std::string error;
-	int threadCount = Scraper::getScraper()->getThreadCount(error);
-	if (threadCount < 0)
-	{
-		window->pushGui(new GuiMsgBox(window, _("AN ERROR OCCURED") + std::string(" :\r\n") + error)); // batocera
-		return;
-	}
-
-	if (threadCount == 0)
-		threadCount = 1;
-
-	ThreadedScraper::mInstance = new ThreadedScraper(window, searches, threadCount);
+	ThreadedScraper::mInstance = new ThreadedScraper(window, searches);
 }
 
 void ThreadedScraper::stop()
@@ -278,7 +209,7 @@ void ThreadedScraper::stop()
 
 	try
 	{
-		thread->mExitCode = ASYNC_DONE;
+		thread->mExit = true;
 	}
 	catch (...) {}
 }

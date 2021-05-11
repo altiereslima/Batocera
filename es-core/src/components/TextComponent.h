@@ -7,7 +7,6 @@
 
 class ThemeData;
 
-
 // Used to display text.
 // TextComponent::setSize(x, y) works a little differently than most components:
 //  * (0, 0)                     - will automatically calculate a size that fits the text on one line (expand horizontally)
@@ -48,39 +47,23 @@ public:
 	void setGlowSize(unsigned int size) { mGlowSize = size; };
 	void setGlowOffset(float x, float y) { mGlowOffset = Vector2f(x,y); };
 
-	void setPadding(const Vector4f padding);
+	void setPadding(const Vector4f padding) { mPadding = padding; }
 
 	virtual void update(int deltaTime);
 
-	enum AutoScrollType : unsigned int
-	{
-		NONE = 0,
-		HORIZONTAL = 1,
-		VERTICAL = 2
-	};
-
-	AutoScrollType getAutoScroll() { return mAutoScroll; }
-	void setAutoScroll(AutoScrollType value);
-	void setAutoScroll(bool scroll);
+	bool getAutoScroll() { return mAutoScroll; }
+	void setAutoScroll(bool value);
 
 	unsigned int getColor() { return mColor; }
 
-	std::string getOriginalThemeText() { return mSourceText; }
-
-	ThemeData::ThemeElement::Property getProperty(const std::string name) override;
-	void setProperty(const std::string name, const ThemeData::ThemeElement::Property& value) override;
-
-	virtual void onShow() override;
-
 protected:
-	void buildTextCache();
 	virtual void onTextChanged();
 
 	std::string mText;
 	std::shared_ptr<Font> mFont;
-	std::string mSourceText;
 
-private:	
+private:
+	void calculateExtent();
 	void renderSingleGlow(const Transform4x4f& parentTrans, float yOff, float x, float y);
 	void renderGlow(const Transform4x4f& parentTrans, float yOff, float xOff);
 
@@ -110,7 +93,7 @@ private:
 	int mMarqueeOffset2;
 	int mMarqueeTime;
 
-	AutoScrollType mAutoScroll;
+	bool mAutoScroll;
 };
 
 #endif // ES_CORE_COMPONENTS_TEXT_COMPONENT_H

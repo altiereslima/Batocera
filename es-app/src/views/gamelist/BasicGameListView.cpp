@@ -9,7 +9,6 @@
 #include "SystemConf.h"
 #include "FileData.h"
 #include "LocaleES.h"
-#include "GameNameFormatter.h"
 
 BasicGameListView::BasicGameListView(Window* window, FolderData* root)
 	: ISimpleGameListView(window, root), mList(window)
@@ -55,11 +54,11 @@ void BasicGameListView::populateList(const std::vector<FileData*>& files)
 	SystemData* system = mCursorStack.size() && mRoot->getSystem()->isGroupSystem() ? mCursorStack.top()->getSystem() : mRoot->getSystem();
 
 	auto groupTheme = system->getTheme();
-	if (groupTheme && mHeaderImage.hasImage())
+	if (groupTheme)
 	{
 		const ThemeData::ThemeElement* logoElem = groupTheme->getElement(getName(), "logo", "image");
 		if (logoElem && logoElem->has("path") && Utils::FileSystem::exists(logoElem->get<std::string>("path")))
-			mHeaderImage.setImage(logoElem->get<std::string>("path"), false, mHeaderImage.getMaxSizeInfo());
+			mHeaderImage.setImage(logoElem->get<std::string>("path"));
 	}
 
 	mHeaderText.setText(system->getFullName());
@@ -68,48 +67,63 @@ void BasicGameListView::populateList(const std::vector<FileData*>& files)
 
 	if (files.size() > 0)
 	{
-		bool showParentFolder = mRoot->getSystem()->getShowParentFolder();
-		if (showParentFolder && mCursorStack.size())
+		if (mCursorStack.size())
 		{
 			FileData* placeholder = new FileData(PLACEHOLDER, "..", this->mRoot->getSystem());
 			mList.add(". .", placeholder, true);
 		}
 
-		GameNameFormatter formatter(mRoot->getSystem());
+		std::string systemName = mRoot->getSystem()->getName();
 
-		bool favoritesFirst = mRoot->getSystem()->getShowFavoritesFirst();
+		bool favoritesFirst = Settings::getInstance()->getBool("FavoritesFirst");
+		bool showFavoriteIcon = (systemName != "favorites" && systemName != "recent");
+		if (!showFavoriteIcon)
+			favoritesFirst = false;
+
 		if (favoritesFirst)
-		{			
+		{
 			for (auto file : files)
 			{
 				if (!file->getFavorite())
 					continue;
-						
-				mList.add(formatter.getDisplayName(file), file, file->getType() == FOLDER);
+				
+				if (showFavoriteIcon)
+					mList.add(_U("\uF006 ") + file->getName(), file, file->getType() == FOLDER);
+				else if (file->getType() == FOLDER)
+					mList.add(_U("\uF114 ") + file->getName(), file, true);
+				else
+					mList.add(file->getName(), file, false);
 			}
 		}
 
 		for (auto file : files)		
 		{
-			if (favoritesFirst && file->getFavorite())
-				continue;
-				
-			mList.add(formatter.getDisplayName(file), file, file->getType() == FOLDER);
+			if (file->getFavorite())
+			{
+				if (favoritesFirst)
+					continue;
+
+				if (showFavoriteIcon)
+				{
+					mList.add(_U("\uF006 ") + file->getName(), file, file->getType() == FOLDER);
+					continue;
+				}
+			}
+
+			if (file->getType() == FOLDER)
+				mList.add(_U("\uF114 ") + file->getName(), file, true);
+			else
+				mList.add(file->getName(), file, false);
 		}
 
 		// if we have the ".." PLACEHOLDER, then select the first game instead of the placeholder
-		if (showParentFolder && mCursorStack.size() && mList.size() > 1 && mList.getCursorIndex() == 0)
+		if (mCursorStack.size() && mList.size() > 1 && mList.getCursorIndex() == 0)
 			mList.setCursorIndex(1);
 	}
 	else
 	{
 		addPlaceholder();
 	}
-
-	updateFolderPath();
-
-	if (mShowing)
-		onShow();
 }
 
 FileData* BasicGameListView::getCursor()
@@ -180,25 +194,31 @@ void BasicGameListView::launch(FileData* game)
 	ViewController::get()->launch(game);
 }
 
-void BasicGameListView::remove(FileData *game)
+void BasicGameListView::remove(FileData *game, bool deleteFile)
 {
+	if (deleteFile)
+		Utils::FileSystem::removeFile(game->getPath());  // actually delete the file on the filesystem
 	FolderData* parent = game->getParent();
 	if (getCursor() == game)                     // Select next element in list, or prev if none
 	{
-		std::vector<FileData*> siblings = mList.getObjects();
-
-		int gamePos = getCursorIndex();
-		if ((gamePos + 1) < (int)siblings.size())
-			setCursor(siblings.at(gamePos + 1));
-		else if ((gamePos - 1) > 0)
-			setCursor(siblings.at(gamePos - 1));
+		std::vector<FileData*> siblings = parent->getChildrenListToDisplay();
+		auto gameIter = std::find(siblings.cbegin(), siblings.cend(), game);
+		unsigned int gamePos = (int)std::distance(siblings.cbegin(), gameIter);
+		if (gameIter != siblings.cend())
+		{
+			if ((gamePos + 1) < siblings.size())
+			{
+				setCursor(siblings.at(gamePos + 1));
+			} else if (gamePos > 1) {
+				setCursor(siblings.at(gamePos - 1));
+			}
+		}
 	}
-
 	mList.remove(game);
 	if(mList.size() == 0)
+	{
 		addPlaceholder();
-
-	mRoot->removeFromVirtualFolders(game);
+	}
 	delete game;                                 // remove before repopulating (removes from parent)
 	onFileChanged(parent, FILE_REMOVED);           // update the view, with game removed
 }
@@ -207,31 +227,28 @@ std::vector<HelpPrompt> BasicGameListView::getHelpPrompts()
 {
 	std::vector<HelpPrompt> prompts;
 
-	if (Renderer::getScreenProportion() > 1.4)
-	{
-		if (mPopupSelfReference == nullptr && Settings::getInstance()->getBool("QuickSystemSelect"))
-			prompts.push_back(HelpPrompt("left/right", _("SYSTEM"))); // batocera
-
-		prompts.push_back(HelpPrompt("up/down", _("CHOOSE"))); // batocera
-	}
-
+	if(Settings::getInstance()->getBool("QuickSystemSelect"))
+	  prompts.push_back(HelpPrompt("left/right", _("SYSTEM"))); // batocera
+	prompts.push_back(HelpPrompt("up/down", _("CHOOSE"))); // batocera
 	prompts.push_back(HelpPrompt(BUTTON_OK, _("LAUNCH")));
 	prompts.push_back(HelpPrompt(BUTTON_BACK, _("BACK")));
-
 	if(!UIModeController::getInstance()->isUIModeKid())
-	  prompts.push_back(HelpPrompt("select", _("VIEW OPTIONS"))); // batocera
+	  prompts.push_back(HelpPrompt("select", _("OPTIONS"))); // batocera
 
-	if (UIModeController::getInstance()->isUIModeKid())
-		prompts.push_back(HelpPrompt("x", _("GAME OPTIONS")));
-	else
-		prompts.push_back(HelpPrompt("x", _("GAME OPTIONS") + std::string(" / ") + _("FAVORITE")));
-
-	prompts.push_back(HelpPrompt("y", _("RANDOM") + std::string(" / ") + _("SEARCH")));
-	/*
-	FileData* cursor = getCursor();
-	if (cursor != nullptr && cursor->isNetplaySupported())
-		prompts.push_back(HelpPrompt("x", _("NETPLAY"))); // batocera
-	else
+	if (SystemConf::getInstance()->get("global.netplay") == "1")
+	{
+		if (mRoot->getSystem()->isNetplaySupported())
+			prompts.push_back(HelpPrompt("x", _("NETPLAY"))); // batocera
+		else
+		{
+			FileData* cursor = getCursor();
+			if (cursor != nullptr && cursor->getType() == GAME && cursor->getSourceFileData()->getSystem() != nullptr && cursor->getSourceFileData()->getSystem()->isNetplaySupported())
+				prompts.push_back(HelpPrompt("x", _("NETPLAY"))); // batocera
+			else if (mRoot->getSystem()->isGameSystem())
+				prompts.push_back(HelpPrompt("x", _("RANDOM"))); // batocera
+		}
+	}
+	else if(mRoot->getSystem()->isGameSystem())
 		prompts.push_back(HelpPrompt("x", _("RANDOM"))); // batocera
 
 	if(mRoot->getSystem()->isGameSystem() && !UIModeController::getInstance()->isUIModeKid())
@@ -242,8 +259,7 @@ std::vector<HelpPrompt> BasicGameListView::getHelpPrompts()
 			prompts.push_back(HelpPrompt("y", _("Favorites")));
 		else
 			prompts.push_back(HelpPrompt("y", _(prompt.c_str())));
-	}*/
-
+	}
 	return prompts;
 }
 

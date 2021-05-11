@@ -5,25 +5,25 @@
 #include <string>
 #include <map>
 
-class SystemConf 
-{
+class SystemConf {
+
 public:
-	static SystemConf* getInstance();
-	
+    SystemConf();
+
     bool loadSystemConf();
+
     bool saveSystemConf();
 
     std::string get(const std::string &name);
+    std::string get(const std::string &name, const std::string &defaut);
+
     bool set(const std::string &name, const std::string &value);
 
-	bool getBool(const std::string &name, bool defaultValue = false);
-	bool setBool(const std::string &name, bool value);
+    static SystemConf *sInstance;
 
+    static SystemConf *getInstance();
 private:
-	SystemConf();
-	static SystemConf* sInstance;
-
-	std::map<std::string, std::string> confMap;
+    std::map<std::string, std::string> confMap;
 	bool mWasChanged;
 };
 

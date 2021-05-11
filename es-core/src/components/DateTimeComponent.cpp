@@ -57,16 +57,16 @@ std::string DateTimeComponent::getDisplayString() const
 		Utils::Time::DateTime now(Utils::Time::now());
 		Utils::Time::Duration dur(now.getTime() - mTime.getTime());
 
-		char buf[256];
+		char buf[64];
 
 		if(dur.getDays() > 0)
-			snprintf(buf, 256, ngettext("%d day ago", "%d days ago", dur.getDays()), dur.getDays());
+			sprintf(buf, "%d day%s ago", dur.getDays(), (dur.getDays() > 1) ? "s" : "");
 		else if(dur.getHours() > 0)
-			snprintf(buf, 256, ngettext("%d hour ago", "%d hours ago", dur.getHours()), dur.getHours());
+			sprintf(buf, "%d hour%s ago", dur.getHours(), (dur.getHours() > 1) ? "s" : "");
 		else if(dur.getMinutes() > 0)
-			snprintf(buf, 256, ngettext("%d minute ago", "%d minutes ago", dur.getMinutes()), dur.getMinutes());
+			sprintf(buf, "%d minute%s ago", dur.getMinutes(), (dur.getMinutes() > 1) ? "s" : "");
 		else
-			snprintf(buf, 256, ngettext("%d second ago", "%d seconds ago", dur.getSeconds()), dur.getSeconds());
+			sprintf(buf, "%d second%s ago", dur.getSeconds(), (dur.getSeconds() > 1) ? "s" : "");
 
 		return std::string(buf);
 	}

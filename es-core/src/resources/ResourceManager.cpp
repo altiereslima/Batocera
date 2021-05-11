@@ -3,7 +3,6 @@
 #include "utils/FileSystemUtil.h"
 #include "utils/StringUtil.h"
 #include <fstream>
-#include "Log.h"
 
 auto array_deleter = [](unsigned char* p) { delete[] p; };
 auto nop_deleter = [](unsigned char* /*p*/) { };
@@ -32,7 +31,28 @@ std::string ResourceManager::getResourcePath(const std::string& path) const
 	std::string test = Utils::FileSystem::getEsConfigPath() + "/resources/" + &path[2];
 	if(Utils::FileSystem::exists(test))
 		return test;
-		
+
+	
+#if WIN32 && _DEBUG
+	// Windows DEBUG -> Avoid resource & locale copy -> Look in project directories
+	
+	test = Utils::String::replace(Utils::FileSystem::getSharedConfigPath(), "/Debug", "") + "/resources/" + &path[2];
+	if (Utils::FileSystem::exists(test))
+		return test;
+
+	if (path.find(":/locale/") != std::string::npos)
+	{
+		test = Utils::String::replace(Utils::FileSystem::getSharedConfigPath(), "/Debug", "") + "/" + &path[2];
+		if (Utils::FileSystem::exists(test))
+			return test;
+
+		test = Utils::String::replace(Utils::FileSystem::getSharedConfigPath(), "/Debug", "") + "/" + Utils::String::replace(path, ":/locale/", "locale/lang/");
+		if (Utils::FileSystem::exists(test))
+			return test;
+	}
+
+#endif
+
 	// check in exepath
 	test = Utils::FileSystem::getSharedConfigPath() + "/resources/" + &path[2];
 	if(Utils::FileSystem::exists(test))
@@ -42,17 +62,6 @@ std::string ResourceManager::getResourcePath(const std::string& path) const
 	test = Utils::FileSystem::getCWDPath() + "/resources/" + &path[2];
 	if(Utils::FileSystem::exists(test))
 		return test;
-
-#if WIN32
-	if (Utils::String::startsWith(path, ":/locale/"))
-	{
-		test = Utils::FileSystem::getCanonicalPath(Utils::FileSystem::getExePath() + "/" + &path[2]);
-		if (Utils::FileSystem::exists(test))
-			return test;
-	}
-#endif
-
-	LOG(LogError) << "Resource path not found: " << path;
 
 	// not a resource, return unmodified path
 	return path;
@@ -77,12 +86,8 @@ const ResourceData ResourceManager::getFileData(const std::string& path) const
 
 ResourceData ResourceManager::loadFile(const std::string& path, size_t size) const
 {
-#if defined(_WIN32)
-	std::ifstream stream(Utils::String::convertToWideString(path), std::ios::binary);
-#else
 	std::ifstream stream(path, std::ios::binary);
-#endif
-
+	
 	if (size == 0 || size == SIZE_MAX)
 	{
 		stream.seekg(0, stream.end);
@@ -104,8 +109,8 @@ bool ResourceManager::fileExists(const std::string& path) const
 	//if it exists as a resource file, return true
 	if(getResourcePath(path) != path)
 		return true;
-		
-	return Utils::FileSystem::exists(Utils::FileSystem::getCanonicalPath(path));
+
+	return Utils::FileSystem::exists(path);
 }
 
 void ResourceManager::unloadAll()
@@ -117,11 +122,7 @@ void ResourceManager::unloadAll()
 
 		if (!info->data.expired())
 		{
-			if (!info->locked)
-				info->reload = info->data.lock()->unload();
-			else
-				info->locked = false;
-
+			info->reload = info->data.lock()->unload();
 			iter++;
 		}
 		else
@@ -156,28 +157,5 @@ void ResourceManager::addReloadable(std::weak_ptr<IReloadable> reloadable)
 	std::shared_ptr<ReloadableInfo> info = std::make_shared<ReloadableInfo>();
 	info->data = reloadable;
 	info->reload = false;
-	info->locked = false;
 	mReloadables.push_back(info);
-}
-
-void ResourceManager::removeReloadable(std::weak_ptr<IReloadable> reloadable)
-{
-	auto iter = mReloadables.cbegin();
-	while (iter != mReloadables.cend())
-	{
-		std::shared_ptr<ReloadableInfo> info = *iter;
-
-		if (!info->data.expired())
-		{
-			if (info->data.lock() == reloadable.lock())
-			{
-				info->locked = true;
-				break;
-			}
-
-			iter++;
-		}
-		else
-			iter = mReloadables.erase(iter);
-	}
 }

@@ -25,8 +25,6 @@ namespace Renderer
 	static int              screenRotate       = 0;
 	static bool             initialCursorState = 1;
 
-	static Vector2i			sdlWindowPosition = Vector2i(SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED);
-
 	static void setIcon()
 	{
 		size_t                     width   = 0;
@@ -84,64 +82,12 @@ namespace Renderer
 		screenOffsetX = Settings::getInstance()->getInt("ScreenOffsetX") ? Settings::getInstance()->getInt("ScreenOffsetX") : 0;
 		screenOffsetY = Settings::getInstance()->getInt("ScreenOffsetY") ? Settings::getInstance()->getInt("ScreenOffsetY") : 0;
 		screenRotate  = Settings::getInstance()->getInt("ScreenRotate")  ? Settings::getInstance()->getInt("ScreenRotate")  : 0;
-		
-		/*
-		if ((screenRotate == 1 || screenRotate == 3) && !Settings::getInstance()->getBool("Windowed"))
-		{
-			int tmp = screenWidth;
-			screenWidth = screenHeight;
-			screenHeight = tmp;
-		}
-		else */if ((screenRotate == 1 || screenRotate == 3) && Settings::getInstance()->getBool("Windowed"))
-		{
-			int tmp = screenWidth;
-			screenWidth = screenHeight;
-			screenHeight = tmp;
-		}
-		
-		int monitorId = Settings::getInstance()->getInt("MonitorID");
-		if (monitorId >= 0 && sdlWindowPosition == Vector2i(SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED))
-		{
-			int displays = SDL_GetNumVideoDisplays();
-			if (displays > monitorId)
-			{
-				SDL_Rect rc;
-				SDL_GetDisplayBounds(monitorId, &rc);
-				
-				sdlWindowPosition = Vector2i(rc.x, rc.y);
 
-				if (Settings::getInstance()->getBool("Windowed") && (Settings::getInstance()->getInt("WindowWidth") || Settings::getInstance()->getInt("ScreenWidth")))
-				{
-					if (windowWidth != rc.w || windowHeight != rc.h)
-					{
-						sdlWindowPosition = Vector2i(
-							rc.x + (rc.w - windowWidth) / 2,
-							rc.y + (rc.h - windowHeight) / 2
-						);
-					}
-				}
-			/*	else
-				{
-					windowWidth = rc.w;
-					windowHeight = rc.h;
-					screenWidth = rc.w;
-					screenHeight = rc.h;
-				}*/
-			}
-		}
-		
 		setupWindow();
 
 		unsigned int windowFlags = (Settings::getInstance()->getBool("Windowed") ? 0 : (Settings::getInstance()->getBool("FullscreenBorderless") ? SDL_WINDOW_BORDERLESS : SDL_WINDOW_FULLSCREEN)) | getWindowFlags();
 
-#if WIN32
-		if (Settings::getInstance()->getBool("AlwaysOnTop"))
-			windowFlags |= SDL_WINDOW_ALWAYS_ON_TOP;
-
-		windowFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
-#endif
-
-		if((sdlWindow = SDL_CreateWindow("EmulationStation", sdlWindowPosition.x(), sdlWindowPosition.y(), windowWidth, windowHeight, windowFlags)) == nullptr)
+		if((sdlWindow = SDL_CreateWindow("EmulationStation", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, windowFlags)) == nullptr)
 		{
 			LOG(LogError) << "Error creating SDL window!\n\t" << SDL_GetError();
 			return false;
@@ -159,13 +105,6 @@ namespace Renderer
 
 	static void destroyWindow()
 	{
-		if (Settings::getInstance()->getBool("Windowed") && Settings::getInstance()->getInt("WindowWidth") && Settings::getInstance()->getInt("WindowHeight"))
-		{
-			int x; int y;
-			SDL_GetWindowPosition(sdlWindow, &x, &y);
-			sdlWindowPosition = Vector2i(x, y); // Save position to restore it later
-		}
-
 		destroyContext();
 
 		SDL_DestroyWindow(sdlWindow);
@@ -176,26 +115,6 @@ namespace Renderer
 		SDL_Quit();
 
 	} // destroyWindow
-
-	void activateWindow()
-	{
-		SDL_RestoreWindow(sdlWindow);
-		SDL_RaiseWindow(sdlWindow);
-
-		if (Settings::getInstance()->getBool("Windowed"))
-		{
-			int h; int w;
-			SDL_GetWindowSize(sdlWindow, &w, &h);
-
-			SDL_DisplayMode DM;
-			SDL_GetCurrentDisplayMode(0, &DM);
-
-			if (w == DM.w && h == DM.h)
-				SDL_SetWindowPosition(sdlWindow, 0, 0);
-		}
-		
-		SDL_SetWindowInputFocus(sdlWindow);		
-	}
 
 	bool init()
 	{
@@ -357,17 +276,9 @@ namespace Renderer
 	int         getScreenOffsetY() { return screenOffsetY; }
 	int         getScreenRotate()  { return screenRotate; }
 
-	float		getScreenProportion() 
-	{ 
-		if (screenHeight == 0)
-			return 1.0;
-
-		return (float) screenWidth / (float) screenHeight;
-	}
-
 	bool        isSmallScreen()    
 	{ 		
-		return screenWidth <= 480 || screenHeight <= 480; 
+		return screenWidth < 400 || screenHeight < 400; 
 	};
 
 	bool isClippingEnabled() { return !clipStack.empty(); }
@@ -390,7 +301,7 @@ namespace Renderer
 
 	bool isVisibleOnScreen(float x, float y, float w, float h)
 	{
-		Rect screen = Rect(0, 0, Renderer::getScreenWidth(), Renderer::getScreenHeight());
+		Rect screen = Rect(0, 0, Renderer::getWindowWidth(), Renderer::getWindowHeight());
 		Rect box = Rect(x, y, w, h);
 
 		if (w > 0 && x + w <= 0)
@@ -398,13 +309,13 @@ namespace Renderer
 
 		if (h > 0 && y + h <= 0)
 			return false;
-		
+
 		if (x == screen.w || y == screen.h)
 			return false;
-			
+
 		if (!rectOverlap(box, screen))
 			return false;
-			
+
 		if (clipStack.empty())
 			return true;
 
@@ -417,6 +328,7 @@ namespace Renderer
 		screen = nativeClipStack.top();
 		return rectOverlap(screen, box);
 	}
+
 
 	unsigned int mixColors(unsigned int first, unsigned int second, float percent)
 	{
@@ -437,64 +349,5 @@ namespace Renderer
 
 		return (alpha << 24) | (blue << 16) | (green << 8) | red;
 	}
-
-#define ROUNDING_PIECES 8.0f
-
-	static void addRoundCorner(float x, float y, double sa, double arc, float r, unsigned int color, float pieces, std::vector<Vertex> &vertex)
-	{
-		// centre of the arc, for clockwise sense
-		float cent_x = x + r * Math::cosf(sa + ES_PI / 2.0f);
-		float cent_y = y + r * Math::sinf(sa + ES_PI / 2.0f);
-
-		// build up piecemeal including end of the arc
-		int n = ceil(pieces * arc / ES_PI * 2.0f);
-
-		float step = arc / (float)n;
-
-		Vertex vx;
-		vx.tex = Vector2f::Zero();
-		vx.col = color;
-
-		for (int i = 0; i <= n; i++)
-		{
-			float ang = sa + step * (float)i;
-
-			// compute the next point
-			float next_x = cent_x + r * Math::sinf(ang);
-			float next_y = cent_y - r * Math::cosf(ang);
-
-			vx.pos[0] = next_x;
-			vx.pos[1] = next_y;
-			vertex.push_back(vx);
-		}
-	}
-
-	std::vector<Vertex> createRoundRect(float x, float y, float width, float height, float radius, unsigned int color)
-	{
-		auto finalColor = convertColor(color);
-		float pieces = Math::min(3.0f, Math::max(radius / 3.0f, ROUNDING_PIECES));
-
-		std::vector<Vertex> vertex;
-		addRoundCorner(x, y + radius, 3.0f * ES_PI / 2.0f, ES_PI / 2.0f, radius, finalColor, pieces, vertex);
-		addRoundCorner(x + width - radius, y, 0.0, ES_PI / 2.0f, radius, finalColor, pieces, vertex);
-		addRoundCorner(x + width, y + height - radius, ES_PI / 2.0f, ES_PI / 2.0f, radius, finalColor, pieces, vertex);
-		addRoundCorner(x + radius, y + height, ES_PI, ES_PI / 2.0f, radius, finalColor, pieces, vertex);
-		return vertex;
-	}
-	
-	void drawRoundRect(float x, float y, float width, float height, float radius, unsigned int color, const Blend::Factor _srcBlendFactor, const Blend::Factor _dstBlendFactor)
-	{
-		bindTexture(0);
-
-		std::vector<Vertex> vertex = createRoundRect(x, y, width, height, radius, color);
-		drawTriangleFan(vertex.data(), vertex.size(), _srcBlendFactor, _dstBlendFactor);
-	}
-
-	void enableRoundCornerStencil(float x, float y, float width, float height, float radius)
-	{
-		std::vector<Vertex> vertex = createRoundRect(x, y, width, height, radius);
-		setStencil(vertex.data(), vertex.size());
-	}
-
 
 } // Renderer::

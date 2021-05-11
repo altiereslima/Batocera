@@ -68,7 +68,6 @@ public:
 	void onOriginChanged() override;
 	void onSizeChanged() override;
 	void setOpacity(unsigned char opacity) override;
-	void setScale(float scale) override;
 
 	void render(const Transform4x4f& parentTrans) override;
 	void renderSnapshot(const Transform4x4f& parentTrans);
@@ -145,10 +144,6 @@ public:
 	}
 
 	void setPlaylist(std::shared_ptr<IPlaylist> playList);
-	void onPositionChanged() override;
-
-	bool getPlayAudio() { return mPlayAudio; }
-	void setPlayAudio(bool value) { mPlayAudio = value; }
 
 protected:
 	std::shared_ptr<IPlaylist> mPlaylist;
@@ -180,13 +175,13 @@ protected:
 	float							mFadeIn;
 	std::string						mStaticImagePath;
 	ImageComponent					mStaticImage;
-	bool							mPlayAudio;
 
 	std::string						mVideoPath;
 	std::string						mPlayingVideoPath;
 	bool							mStartDelayed;
 	unsigned						mStartTime;
-	bool							mIsPlaying;	
+	bool							mIsPlaying;
+	bool							mShowing;
 	bool							mDisable;
 	bool							mScreensaverActive;
 	bool							mScreensaverMode;

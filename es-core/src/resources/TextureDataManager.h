@@ -26,8 +26,6 @@ public:
 
 	size_t getQueueSize();
 
-	static bool paused;
-
 private:	
 	void threadProc();
 
@@ -41,7 +39,6 @@ private:
 
 	TextureDataManager*			mManager;
 };
-
 
 //
 // This class manages the loading and unloading of textures
@@ -63,13 +60,6 @@ public:
 	TextureDataManager();
 	~TextureDataManager();
 
-	enum TextureLoadMode : int
-	{
-		ENABLED = 0,
-		DISABLED = 1,
-		MOVETOTOPONLY = 2
-	};
-
 	std::shared_ptr<TextureData> add(const TextureResource* key, bool tiled, bool linear);
 
 	// The texturedata being removed may be loading in a different thread. However it will
@@ -78,7 +68,7 @@ public:
 	void remove(const TextureResource* key);
 
 	void cancelAsync(const TextureResource* key);
-	std::shared_ptr<TextureData> get(const TextureResource* key, TextureLoadMode enableLoading = TextureLoadMode::ENABLED);
+	std::shared_ptr<TextureData> get(const TextureResource* key, bool enableLoading = true);
 	bool bind(const TextureResource* key);
 
 	// Get the total size of all textures managed by this object, loaded and unloaded in bytes

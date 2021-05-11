@@ -10,14 +10,6 @@
 class ComponentList;
 class TextComponent;
 
-struct InputConfigStructure
-{
-	std::string name;
-	bool		skippable;
-	std::string dispName;
-	std::string icon;
-};
-
 class GuiInputConfig : public GuiComponent
 {
 public:
@@ -60,9 +52,6 @@ private:
 	int mHeldInputId;
 
 	BusyComponent mBusyAnim;	
-
-	void initInputConfigStructure();
-	std::vector<InputConfigStructure> GUI_INPUT_CONFIG_LIST;
 };
 
 #endif // ES_CORE_GUIS_GUI_INPUT_CONFIG_H

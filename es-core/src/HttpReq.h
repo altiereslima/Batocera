@@ -6,7 +6,6 @@
 #include <map>
 #include <sstream>
 #include <fstream>
-#include <stdio.h>
 
 /* Usage:
  * HttpReq myRequest("www.google.com", "/index.html");
@@ -48,8 +47,7 @@ public:
 		REQ_429_TOOMANYREQUESTS = 429,
 
 		REQ_430_TOOMANYSCRAPS = 430,
-		REQ_430_TOOMANYFAILURES = 431,
-		REQ_500_INTERNALSERVERERROR = 500
+		REQ_430_TOOMANYFAILURES = 431
 	};
 
 	Status status(); //process any received data and return the status afterwards
@@ -67,9 +65,6 @@ public:
 	int getPosition() { return mPosition; }
 
 	std::string getUrl() { return mUrl; }
-	std::string getFilePath() { return mFilePath; }
-	std::string getResponseContentType() { return mResponseContentType; }
-
 	bool wait();
 
 private:
@@ -95,10 +90,8 @@ private:
 
 	// file stream mode
 	std::string   mFilePath;
-	std::string   mTempStreamPath;	
-	FILE*		  mFile;
-
-	std::string   mResponseContentType;
+	std::string   mTempStreamPath;
+	std::ofstream mStream;
 
 	std::string mErrorMsg;
 	std::string mUrl;

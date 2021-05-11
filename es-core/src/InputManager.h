@@ -4,7 +4,6 @@
 
 #include <SDL_joystick.h>
 #include <map>
-#include <pugixml/src/pugixml.hpp>
 
 class InputConfig;
 class Window;
@@ -40,11 +39,9 @@ private:
 	void removeJoystickByJoystickID(SDL_JoystickID id);
 	bool loadInputConfig(InputConfig* config); // returns true if successfully loaded, false if not (or didn't exist)
 
-    // batocera
-    void clearJoystick();
-    void addAllJoysticks();
-
-	bool tryLoadInputConfig(std::string path, InputConfig* config, bool allowApproximate = true);
+        // batocera
+        void clearJoystick();
+        void addAllJoysticks();
 
 public:
 	virtual ~InputManager();

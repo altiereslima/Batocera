@@ -7,7 +7,6 @@
 #include "resources/Font.h"
 #include "PowerSaver.h"
 #include "ThemeData.h"
-#include <vector>
 
 enum CursorState
 {
@@ -113,14 +112,6 @@ public:
 		onCursorChanged(CURSOR_STOPPED);
 	}
 
-	virtual void onHide() override
-	{
-		GuiComponent::onHide();
-
-		if (isScrolling())
-			stopScrolling();
-	}
-
 	// batocera
 	void setCursorIndex(int index, bool force = false)
 	{
@@ -185,21 +176,7 @@ public:
 
 		return false;
 	}
-
-	typename std::vector<Entry>::iterator findEntry(const UserData& obj)
-	{
-		for (auto it = mEntries.begin(); it != mEntries.end(); it++)
-			if ((*it).object == obj)
-				return it;
-
-		return mEntries.end();
-	}
-
-	typename std::vector<Entry>::iterator end()
-	{
-		return mEntries.end();
-	}
-
+	
 	// entry management
 	void add(const Entry& e)
 	{
@@ -248,24 +225,17 @@ protected:
 	{
 		PowerSaver::lock(velocity == 0);
 
-		bool sendCursorChanged = false;
-
 		// generate an onCursorChanged event in the stopped state when the user lets go of the key
-		if (velocity == 0 && mScrollVelocity != 0)
-			sendCursorChanged = true; // onCursorChanged(CURSOR_STOPPED);
+		if(velocity == 0 && mScrollVelocity != 0)
+			onCursorChanged(CURSOR_STOPPED);
 
 		mScrollVelocity = velocity;
 		mScrollTier = 0;
 		mScrollTierAccumulator = 0;
 		mScrollCursorAccumulator = 0;
-		
+
 		int prevCursor = mCursor;
-
-		if (sendCursorChanged)
-			onCursorChanged(CURSOR_STOPPED);
-		else
-			scroll(mScrollVelocity);
-
+		scroll(mScrollVelocity);
 		return (prevCursor != mCursor);
 	}
 

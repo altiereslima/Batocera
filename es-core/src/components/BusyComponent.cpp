@@ -15,11 +15,9 @@ AnimationFrame BUSY_ANIMATION_FRAMES[] = {
 };
 const AnimationDef BUSY_ANIMATION_DEF = { BUSY_ANIMATION_FRAMES, 4, true };
 
-BusyComponent::BusyComponent(Window* window, const std::string& text) : GuiComponent(window),
+BusyComponent::BusyComponent(Window* window) : GuiComponent(window),
 	mBackground(window, ":/frame.png"), mGrid(window, Vector2i(5, 3))
 {
-	threadMessagechanged = false;
-
 	auto theme = ThemeData::getMenuTheme();
 	mBackground.setImagePath(theme->Background.path);
 	mBackground.setEdgeColor(theme->Background.color);
@@ -29,8 +27,7 @@ BusyComponent::BusyComponent(Window* window, const std::string& text) : GuiCompo
 	mutex = SDL_CreateMutex(); // batocera
 	mAnimation = std::make_shared<AnimatedImageComponent>(mWindow);
 	mAnimation->load(&BUSY_ANIMATION_DEF);
-	
-	mText = std::make_shared<TextComponent>(mWindow, text == "__default__" ? _("WORKING...") : text, ThemeData::getMenuTheme()->Text.font, ThemeData::getMenuTheme()->Text.color); // batocera
+	mText = std::make_shared<TextComponent>(mWindow, _("WORKING..."), ThemeData::getMenuTheme()->Text.font, ThemeData::getMenuTheme()->Text.color); // batocera
 
 	// col 0 = animation, col 1 = spacer, col 2 = text
 	mGrid.setEntry(mAnimation, Vector2i(1, 1), false, true);
@@ -42,23 +39,14 @@ BusyComponent::BusyComponent(Window* window, const std::string& text) : GuiCompo
 	PowerSaver::pause();
 }
 
-void BusyComponent::setBackgroundVisible(bool visible)
-{
-	mBackground.setVisible(visible);
-}
-
-void BusyComponent::update(int deltaTime)
-{
-	GuiComponent::update(deltaTime);	
-	// mAnimation->setRotation(mAnimation->getRotation() - (deltaTime / 333.3));
-}
-
+// batocera
 BusyComponent::~BusyComponent() 
 {
 	PowerSaver::resume();
 	SDL_DestroyMutex(mutex);
 }
 
+// batocera
 void BusyComponent::setText(std::string txt)
 {
 	if (SDL_LockMutex(mutex) == 0)
@@ -73,6 +61,7 @@ void BusyComponent::setText(std::string txt)
 	}
 }
 
+// batocera
 void BusyComponent::render(const Transform4x4f& parentTrans)
 {
 	if (SDL_LockMutex(mutex) == 0)

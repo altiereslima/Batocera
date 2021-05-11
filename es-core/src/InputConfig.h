@@ -9,19 +9,20 @@
 #include <sstream>
 #include <vector>
 
-#ifdef WIN32
-#define INVERTEDINPUTCONFIG
-#endif
-
 namespace pugi { class xml_node; }
 
 #define DEVICE_KEYBOARD -1
 #define DEVICE_CEC      -2
 // batocera
-#define MAX_PLAYERS 8
+#define MAX_PLAYERS 5
 
-extern char* BUTTON_OK;
-extern char* BUTTON_BACK;
+#ifdef WIN32
+#define BUTTON_OK	"a"
+#define BUTTON_BACK	"b"
+#else
+#define BUTTON_OK	"b"
+#define BUTTON_BACK	"a"
+#endif
 
 enum InputType
 {
@@ -136,9 +137,6 @@ public:
 
 	bool isConfigured();
 
-	static std::string buttonLabel(const std::string& button);
-	static std::string buttonImage(const std::string& button);
-
 private:
 	std::map<std::string, Input> mNameMap;
 	const int mDeviceId;
@@ -148,9 +146,6 @@ private:
 	const int mDeviceNbButtons; // number of buttons of the device // batocera
 	const int mDeviceNbHats;    // number of hats    of the device // batocera
 	const int mDeviceNbAxes;    // number of axes    of the device // batocera
-
-public:
-	static void AssignActionButtons();
 };
 
 #endif // ES_CORE_INPUT_CONFIG_H

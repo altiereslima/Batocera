@@ -12,7 +12,6 @@
 #include <assert.h>
 #include "Settings.h"
 #include <algorithm>
-#include "LocaleES.h"
 
 #define KEYBOARD_GUID_STRING "-1"
 #define CEC_GUID_STRING      "-2"
@@ -78,15 +77,14 @@ void InputManager::init()
 
 void InputManager::addJoystickByDeviceIndex(int id)
 {
+	assert(id >= 0 && id < SDL_NumJoysticks());
+	
 	// open joystick & add to our list
 	SDL_Joystick* joy = SDL_JoystickOpen(id);
-	if (joy == nullptr)
-		return;
+	assert(joy);
 
 	// add it to our list so we can close it again later
 	SDL_JoystickID joyId = SDL_JoystickInstanceID(joy);
-	removeJoystickByJoystickID(joyId);
-
 	mJoysticks[joyId] = joy;
 
 	char guid[65];
@@ -95,9 +93,11 @@ void InputManager::addJoystickByDeviceIndex(int id)
 	// create the InputConfig
 	mInputConfigs[joyId] = new InputConfig(joyId, id, SDL_JoystickName(joy), guid, SDL_JoystickNumButtons(joy), SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy)); // batocera
 	if(!loadInputConfig(mInputConfigs[joyId]))
+	{
 		LOG(LogInfo) << "Added unconfigured joystick " << SDL_JoystickName(joy) << " (GUID: " << guid << ", instance ID: " << joyId << ", device index: " << id << ").";
-	else
+	}else{
 		LOG(LogInfo) << "Added known joystick " << SDL_JoystickName(joy) << " (instance ID: " << joyId << ", device index: " << id << ")";
+	}
 
 	// set up the prevAxisValues
 	int numAxes = SDL_JoystickNumAxes(joy);
@@ -107,21 +107,17 @@ void InputManager::addJoystickByDeviceIndex(int id)
 
 void InputManager::removeJoystickByJoystickID(SDL_JoystickID joyId)
 {
+	assert(joyId != -1);
+
 	// delete old prevAxisValues
 	auto axisIt = mPrevAxisValues.find(joyId);
-	if (axisIt != mPrevAxisValues.cend())
-	{
-		delete[] axisIt->second;
-		mPrevAxisValues.erase(axisIt);
-	}
+	delete[] axisIt->second;
+	mPrevAxisValues.erase(axisIt);
 
 	// delete old InputConfig
 	auto it = mInputConfigs.find(joyId);
-	if (it != mInputConfigs.cend())
-	{
-		delete it->second;
-		mInputConfigs.erase(it);
-	}
+	delete it->second;
+	mInputConfigs.erase(it);
 
 	// close the joystick
 	auto joyIt = mJoysticks.find(joyId);
@@ -129,9 +125,9 @@ void InputManager::removeJoystickByJoystickID(SDL_JoystickID joyId)
 	{
 		SDL_JoystickClose(joyIt->second);
 		mJoysticks.erase(joyIt);
-	}
-	else
+	}else{
 		LOG(LogError) << "Could not find joystick to close (instance ID: " << joyId << ")";
+	}
 }
 
 // batocera
@@ -243,17 +239,17 @@ InputConfig* InputManager::getInputConfigByDevice(int device)
 bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 {
 	bool causedEvent = false;
-	switch (ev.type)
+	switch(ev.type)
 	{
 	case SDL_JOYAXISMOTION:
-	{
-		// batocera
-	// some axes are "full" : from -32000 to +32000
-	// in this case, their unpressed state is not 0
-	// SDL provides a function to get this value
-	// in es, the trick is to minus this value to the value to do as if it started at 0
-		int initialValue = 0;
-		Sint16 x;
+	  {
+            // batocera
+	    // some axes are "full" : from -32000 to +32000
+	    // in this case, their unpressed state is not 0
+	    // SDL provides a function to get this value
+	    // in es, the trick is to minus this value to the value to do as if it started at 0
+	    int initialValue = 0;
+	    Sint16 x;
 
 #if SDL_VERSION_ATLEAST(2, 0, 9)
 		// SDL_JoystickGetAxisInitialState doesn't work with 8bitdo start+b
@@ -266,7 +262,7 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 
 			auto it = mJoysticksInitialValues.find(guid);
 			if (it != mJoysticksInitialValues.cend())
-				initialValue = it->second;
+				initialValue = it->second;			
 			else if (SDL_JoystickGetAxisInitialState(mJoysticks[ev.jaxis.which], ev.jaxis.axis, &x))
 			{
 				mJoysticksInitialValues[guid] = x;
@@ -276,13 +272,13 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 #endif
 
 		//if it switched boundaries
-		if ((abs(ev.jaxis.value - initialValue) > DEADZONE) != (abs(mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis]) > DEADZONE)) // batocera
+		if((abs(ev.jaxis.value-initialValue) > DEADZONE) != (abs(mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis]) > DEADZONE)) // batocera
 		{
 			int normValue;
-			if (abs(ev.jaxis.value - initialValue) <= DEADZONE) // batocera
+			if(abs(ev.jaxis.value-initialValue) <= DEADZONE) // batocera
 				normValue = 0;
 			else
-				if (ev.jaxis.value - initialValue > 0) // batocera
+				if(ev.jaxis.value-initialValue > 0) // batocera
 					normValue = 1;
 				else
 					normValue = -1;
@@ -291,9 +287,9 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 			causedEvent = true;
 		}
 
-		mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis] = ev.jaxis.value - initialValue; // batocera
+		mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis] = ev.jaxis.value-initialValue; // batocera
 		return causedEvent;
-	}
+	  }
 	case SDL_JOYBUTTONDOWN:
 	case SDL_JOYBUTTONUP:
 		window->input(getInputConfigByDevice(ev.jbutton.which), Input(ev.jbutton.which, TYPE_BUTTON, ev.jbutton.button, ev.jbutton.state == SDL_PRESSED, false));
@@ -304,22 +300,22 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 		return true;
 
 	case SDL_KEYDOWN:
-		if (ev.key.keysym.sym == SDLK_BACKSPACE && SDL_IsTextInputActive())
+		if(ev.key.keysym.sym == SDLK_BACKSPACE && SDL_IsTextInputActive())
 		{
 			window->textInput("\b");
 		}
 
-		if (ev.key.repeat)
+		if(ev.key.repeat)
 			return false;
 
-		// batocera
-//if(ev.key.keysym.sym == SDLK_F4)
-//{
-//	SDL_Event* quit = new SDL_Event();
-//	quit->type = SDL_QUIT;
-//	SDL_PushEvent(quit);
-//	return false;
-//}
+                // batocera
+		//if(ev.key.keysym.sym == SDLK_F4)
+		//{
+		//	SDL_Event* quit = new SDL_Event();
+		//	quit->type = SDL_QUIT;
+		//	SDL_PushEvent(quit);
+		//	return false;
+		//}
 
 		window->input(getInputConfigByDevice(DEVICE_KEYBOARD), Input(DEVICE_KEYBOARD, TYPE_KEY, ev.key.keysym.sym, 1, false));
 		return true;
@@ -333,41 +329,11 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 		break;
 
 	case SDL_JOYDEVICEADDED:
-		{
-			bool exists = std::find_if(mInputConfigs.cbegin(), mInputConfigs.cend(), [ev](const std::pair<SDL_JoystickID, InputConfig*> & t) { return t.second != nullptr && t.second->getDeviceIndex() == ev.jdevice.which; }) != mInputConfigs.cend();
-
-			addJoystickByDeviceIndex(ev.jdevice.which); // ev.jdevice.which is a device index
-			computeLastKnownPlayersDeviceIndexes(); // batocera
-
-			if (!exists)
-			{
-				for (auto it : mInputConfigs)
-				{
-					if (it.second != nullptr && it.second->getDeviceIndex() == ev.jdevice.which)
-					{
-						char trstring[1024];
-						snprintf(trstring, 1024, _("%s connected").c_str(), it.second->getDeviceName().c_str());
-						window->displayNotificationMessage(_U("\uF11B ") + std::string(trstring));
-						break;
-					}
-				}
-			}
-		}
-
+		addJoystickByDeviceIndex(ev.jdevice.which); // ev.jdevice.which is a device index
+		computeLastKnownPlayersDeviceIndexes(); // batocera
 		return true;
 
 	case SDL_JOYDEVICEREMOVED:
-
-		{
-			auto it = mInputConfigs.find(ev.jdevice.which);
-			if (it != mInputConfigs.cend() && it->second != nullptr)
-			{				
-				char trstring[1024];
-				snprintf(trstring, 1024, _("%s disconnected").c_str(), it->second->getDeviceName().c_str());
-				window->displayNotificationMessage(_U("\uF11B ") + std::string(trstring));
-			}
-		}
-
 		removeJoystickByJoystickID(ev.jdevice.which); // ev.jdevice.which is an SDL_JoystickID (instance ID)
 		computeLastKnownPlayersDeviceIndexes(); // batocera
 		return false;
@@ -382,105 +348,64 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 	return false;
 }
 
-bool InputManager::tryLoadInputConfig(std::string path, InputConfig* config, bool allowApproximate)
+bool InputManager::loadInputConfig(InputConfig* config)
 {
-	pugi::xml_node configNode(NULL);
-
-	if (!Utils::FileSystem::exists(path))
+	std::string path = getConfigPath();
+	if(!Utils::FileSystem::exists(path))
 		return false;
-
+	
 	pugi::xml_document doc;
 	pugi::xml_parse_result res = doc.load_file(path.c_str());
 
-	if (!res)
+	if(!res)
 	{
 		LOG(LogError) << "Error parsing input config: " << res.description();
 		return false;
 	}
 
 	pugi::xml_node root = doc.child("inputList");
-	if (!root)
+	if(!root)
 		return false;
 
-	// batocera
+        // batocera
 	// looking for a device having the same guid and name, or if not, one with the same guid or in last chance, one with the same name
-
+	pugi::xml_node configNode(NULL);
 
 	bool found_guid = false;
 	bool found_exact = false;
 	for (pugi::xml_node item = root.child("inputConfig"); item; item = item.next_sibling("inputConfig")) {
-		// check the guid
-		if (strcmp(config->getDeviceGUIDString().c_str(), item.attribute("deviceGUID").value()) == 0) {
-			// found a correct guid
-			found_guid = true; // no more need to check the name only
-			configNode = item;
-#if WIN32
-			found_exact = true;
-			break;
-#else
-			if (strcmp(config->getDeviceName().c_str(), item.attribute("deviceName").value()) == 0) {
-				// found the exact device
-				found_exact = true;
-				configNode = item;
-				break;
-			}
-#endif
-		}
+	  // check the guid
+	  if(strcmp(config->getDeviceGUIDString().c_str(), item.attribute("deviceGUID").value()) == 0) {
+	    // found a correct guid
+	    found_guid = true; // no more need to check the name only
+	    configNode = item;
+	    
+	    if(strcmp(config->getDeviceName().c_str(), item.attribute("deviceName").value()) == 0) {
+	      // found the exact device
+	      found_exact = true;
+	      configNode = item;
+	      break;
+	    }
+	  }
 
-#if !WIN32
-		// check for a name if no guid is found
-		if (found_guid == false) {
-			if (strcmp(config->getDeviceName().c_str(), item.attribute("deviceName").value()) == 0) {
-				configNode = item;
-			}
-		}
-#endif
+	  // check for a name if no guid is found
+	  if(found_guid == false) {
+	    if(strcmp(config->getDeviceName().c_str(), item.attribute("deviceName").value()) == 0) {
+	      configNode = item;
+	    }
+	  }
 	}
-
-	if (!configNode)
+	    
+	if(!configNode)
 		return false;
 
-	// batocera
-	if (found_exact == false)
-	{
-		LOG(LogInfo) << "Approximative device found using guid=" << configNode.attribute("deviceGUID").value() << " name=" << configNode.attribute("deviceName").value() << ")";
-
-		if (!allowApproximate)
-			return false;
+        // batocera
+	if(found_exact == false) {
+	  LOG(LogInfo) << "Approximative device found using guid=" << configNode.attribute("deviceGUID").value() << " name=" << configNode.attribute("deviceName").value() << ")";
 	}
-
+	  
 	config->loadFromXML(configNode);
 	return true;
-}
-
-bool InputManager::loadInputConfig(InputConfig* config)
-{
-	std::string path = getConfigPath();
-
-#if WIN32
-	// Find exact device
-	if (tryLoadInputConfig(path, config, false))
-		return true;
-#else
-	// Find exact device
-	if (tryLoadInputConfig(path, config, false))
-		return true;
-
-	// Find system exact device
-	std::string sharedPath = Utils::FileSystem::getSharedConfigPath() + "/es_input.cfg";
-	if (tryLoadInputConfig(sharedPath, config, false))
-		return true;
-
-	// Find user Approximative device
-	if (tryLoadInputConfig(path, config, true))
-		return true;
-
-	// Find system Approximative device
-	if (tryLoadInputConfig(sharedPath, config, true))
-		return true;
-#endif
-
-	return false;
 }
 
 //used in an "emergency" where no keyboard config could be loaded from the inputmanager config file
@@ -512,11 +437,11 @@ void InputManager::writeDeviceConfig(InputConfig* config)
 
 	pugi::xml_document doc;
 
-	if (Utils::FileSystem::exists(path))
+	if(Utils::FileSystem::exists(path))
 	{
 		// merge files
 		pugi::xml_parse_result result = doc.load_file(path.c_str());
-		if (!result)
+		if(!result)
 		{
 			LOG(LogError) << "Error parsing input config: " << result.description();
 		}
@@ -524,24 +449,19 @@ void InputManager::writeDeviceConfig(InputConfig* config)
 		{
 			// successfully loaded, delete the old entry if it exists
 			pugi::xml_node root = doc.child("inputList");
-			if (root)
+			if(root)
 			{
-				// batocera
-				pugi::xml_node oldEntry(NULL);
-				for (pugi::xml_node item = root.child("inputConfig"); item; item = item.next_sibling("inputConfig")) 
-				{
-					if (strcmp(config->getDeviceGUIDString().c_str(), item.attribute("deviceGUID").value()) == 0
-#if !WIN32
-						&& strcmp(config->getDeviceName().c_str(), item.attribute("deviceName").value()) == 0
-#endif
-						) 
-					{
-						oldEntry = item;
-						break;
-					}
-				}
-				if (oldEntry)
-					root.remove_child(oldEntry);
+			  // batocera
+			  pugi::xml_node oldEntry(NULL);
+			  for (pugi::xml_node item = root.child("inputConfig"); item; item = item.next_sibling("inputConfig")) {
+			    if(strcmp(config->getDeviceGUIDString().c_str(), item.attribute("deviceGUID").value()) == 0 &&
+			       strcmp(config->getDeviceName().c_str(),       item.attribute("deviceName").value()) == 0) {
+			      oldEntry = item;
+			      break;
+			    }
+			  }
+			  if(oldEntry)
+			    root.remove_child(oldEntry);
 			}
 		}
 	}
@@ -597,7 +517,7 @@ void InputManager::doOnFinish()
 
 						LOG(LogInfo) << "	" << tocall;
 						std::cout << "==============================================\ninput config finish command:\n";
-						int exitCode = runSystemCommand(tocall, "", nullptr);
+						int exitCode = runSystemCommand(tocall);
 						std::cout << "==============================================\n";
 
 						if(exitCode != 0)

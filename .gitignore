@@ -47,4 +47,3 @@ CPackSourceConfig.cmake
 *.po~
 /.vs/
 *.sqlite
-.DS_Store

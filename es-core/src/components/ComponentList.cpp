@@ -4,34 +4,27 @@
 
 #define TOTAL_HORIZONTAL_PADDING_PX 20
 
-ComponentList::ComponentList(Window* window) : IList<ComponentListRow, std::string>(window, LIST_SCROLL_STYLE_SLOW, LIST_NEVER_LOOP), mScrollbar(window)
+ComponentList::ComponentList(Window* window) : IList<ComponentListRow, void*>(window, LIST_SCROLL_STYLE_SLOW, LIST_NEVER_LOOP)
 {
 	mSelectorBarOffset = 0;
 	mCameraOffset = 0;
 	mFocused = false;
-
-	mScrollbar.loadFromMenuTheme();	
 }
 
-void ComponentList::addRow(const ComponentListRow& row, bool setCursorHere, bool updateSize, const std::string userData)
+void ComponentList::addRow(const ComponentListRow& row, bool setCursorHere)
 {
-	IList<ComponentListRow, std::string>::Entry e;
+	IList<ComponentListRow, void*>::Entry e;
 	e.name = "";
-	e.object = userData;
+	e.object = NULL;
 	e.data = row;
 
 	this->add(e);
 
-	ComponentListRow& data = mEntries.back().data;
-
-	for(auto it = data.elements.cbegin(); it != data.elements.cend(); it++)
+	for(auto it = mEntries.back().data.elements.cbegin(); it != mEntries.back().data.elements.cend(); it++)
 		addChild(it->component.get());
 
-	if (updateSize)
-	{
-		updateElementSize(data);
-		updateElementPosition(data);
-	}
+	updateElementSize(mEntries.back().data);
+	updateElementPosition(mEntries.back().data);
 
 	// Fix group initial cursor position
 	if (mCursor == 0 && mEntries.size() == 2 && !mEntries[0].data.selectable)
@@ -53,12 +46,7 @@ void ComponentList::addGroup(const std::string& label, bool forceVisible)
 	ComponentListRow row;
 
 	auto group = std::make_shared<TextComponent>(mWindow, label, theme->Group.font, theme->Group.color);
-
-	if (EsLocale::isRTL() && ((Alignment)theme->Group.alignment) == Alignment::ALIGN_LEFT)
-		group->setHorizontalAlignment(Alignment::ALIGN_RIGHT);
-	else
-		group->setHorizontalAlignment((Alignment) theme->Group.alignment);
-
+	group->setHorizontalAlignment((Alignment) theme->Group.alignment);
 	group->setBackgroundColor(theme->Group.backgroundColor); // 0x00000010	
 	if (theme->Group.backgroundColor != 0)
 		group->setRenderBackground(true);
@@ -73,12 +61,10 @@ void ComponentList::addGroup(const std::string& label, bool forceVisible)
 
 void ComponentList::onSizeChanged()
 {
-	float yOffset = 0;
 	for(auto it = mEntries.cbegin(); it != mEntries.cend(); it++)
 	{
 		updateElementSize(it->data);
-		updateElementPosition(it->data, yOffset);
-		yOffset += getRowHeight(it->data);
+		updateElementPosition(it->data);
 	}
 
 	updateCameraOffset();
@@ -109,16 +95,8 @@ bool ComponentList::input(InputConfig* config, Input input)
 		auto& row = mEntries.at(mCursor).data;
 		if(row.elements.size())
 		{
-			if (EsLocale::isRTL())
-			{
-				if (row.elements.front().component->input(config, input))
-					return true;
-			}
-			else
-			{
-				if (row.elements.back().component->input(config, input))
-					return true;
-			}
+			if(row.elements.back().component->input(config, input))
+				return true;
 		}
 	}
 
@@ -142,31 +120,18 @@ bool ComponentList::input(InputConfig* config, Input input)
 
 void ComponentList::update(int deltaTime)
 {
-	mScrollbar.update(deltaTime);
-
 	listUpdate(deltaTime);
 
 	if(size())
 	{
-		if (mUpdateType == ComponentListFlags::UpdateType::UPDATE_ALWAYS)
-		{
-			for (auto& entry : mEntries)
-				for (auto it = entry.data.elements.cbegin(); it != entry.data.elements.cend(); it++)
-					it->component->update(deltaTime);
-		}
-		else if (mUpdateType == ComponentListFlags::UpdateType::UPDATE_WHEN_SELECTED)
-		{
-			// update our currently selected row
-			for (auto it = mEntries.at(mCursor).data.elements.cbegin(); it != mEntries.at(mCursor).data.elements.cend(); it++)
-				it->component->update(deltaTime);
-		}
+		// update our currently selected row
+		for(auto it = mEntries.at(mCursor).data.elements.cbegin(); it != mEntries.at(mCursor).data.elements.cend(); it++)
+			it->component->update(deltaTime);
 	}
 }
 
 void ComponentList::onCursorChanged(const CursorState& state)
 {
-	mScrollbar.onCursorChanged();
-
 	// update the selector bar position
 	// in the future this might be animated
 	mSelectorBarOffset = 0;
@@ -213,9 +178,9 @@ void ComponentList::updateCameraOffset()
 			mCameraOffset = 0;
 		else if(mCameraOffset + mSize.y() > totalHeight)
 			mCameraOffset = totalHeight - mSize.y();
-	}
-	else
+	}else{
 		mCameraOffset = 0;
+	}
 }
 
 void ComponentList::render(const Transform4x4f& parentTrans)
@@ -223,7 +188,6 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 	if(!size())
 		return;
 
-	float opacity = mOpacity / 255.0;
 	auto menuTheme = ThemeData::getMenuTheme();
 	unsigned int selectorColor = menuTheme->Text.selectorColor;
 	unsigned int selectorGradientColor = menuTheme->Text.selectorGradientColor;
@@ -258,8 +222,6 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 			{
 				if (entry.data.selectable)
 					it->component->setColor(textColor);				
-				else 
-					it->component->setColor(menuTheme->Group.color);
 
 				it->component->render(trans);
 			}
@@ -285,16 +247,10 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 		
 		if (entry.data.selectable)
 		{
-			if ((selectorColor != bgColor) && ((selectorColor & 0xFF) != 0x00)) 
-			{
-				Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, 
-					bgColor & 0xFFFFFF00 | (unsigned char)((bgColor & 0xFF) * opacity), 
-					Renderer::Blend::ZERO, Renderer::Blend::ONE_MINUS_SRC_COLOR);
+			if ((selectorColor != bgColor) && ((selectorColor & 0xFF) != 0x00)) {
 
-				Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, 
-					selectorColor & 0xFFFFFF00 | (unsigned char)((selectorColor & 0xFF) * opacity),
-					selectorGradientColor & 0xFFFFFF00 | (unsigned char)((selectorGradientColor & 0xFF) * opacity),					
-					selectorGradientHorz, Renderer::Blend::ONE, Renderer::Blend::ONE);
+				Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, bgColor, Renderer::Blend::ZERO, Renderer::Blend::ONE_MINUS_SRC_COLOR);
+				Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, selectorColor, selectorGradientColor, selectorGradientHorz, Renderer::Blend::ONE, Renderer::Blend::ONE);
 			}
 
 			for (auto& element : entry.data.elements)
@@ -319,46 +275,29 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 	float y = 0;
 	for(unsigned int i = 0; i < mEntries.size(); i++)
 	{
-		
 		if (prevIsGroup && menuTheme->Group.separatorColor != separatorColor)
-			Renderer::drawRect(0.0f, y - 2.0f, mSize.x(), 1.0f, menuTheme->Group.separatorColor & 0xFFFFFF00 | (unsigned char)((menuTheme->Group.separatorColor & 0xFF) * opacity));
+			Renderer::drawRect(0.0f, y - 2.0f, mSize.x(), 1.0f, menuTheme->Group.separatorColor);
 		else
-			Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, separatorColor & 0xFFFFFF00 | (unsigned char)((separatorColor & 0xFF) * opacity));
+			Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, separatorColor);
 
 		y += getRowHeight(mEntries.at(i).data);
 
 		prevIsGroup = !mEntries.at(i).data.selectable;
 	}
 
-	Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, separatorColor & 0xFFFFFF00 | (unsigned char)((separatorColor & 0xFF) * opacity));
+	Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, separatorColor);
 
 	Renderer::popClipRect();
-
-	if (mScrollbar.isEnabled() && mEntries.size() > 0)
-	{
-		mScrollbar.setContainerBounds(getPosition(), getSize());
-		mScrollbar.setRange(0, getTotalRowHeight(), mSize.y());
-		mScrollbar.setScrollPosition(mCameraOffset);
-		mScrollbar.render(parentTrans);
-	}
 }
 
 float ComponentList::getRowHeight(const ComponentListRow& row) const
 {
-	int sz = row.elements.size();
-	if (sz == 0)
-		return 0;
-	else if (sz == 1)
-		return row.elements[0].component->getSize().y();
-
 	// returns the highest component height found in the row
 	float height = 0;
-
-	for(auto& elem : row.elements)
+	for(unsigned int i = 0; i < row.elements.size(); i++)
 	{
-		float h = elem.component->getSize().y();
-		if (h > height)
-			height = h;
+		if(row.elements.at(i).component->getSize().y() > height)
+			height = row.elements.at(i).component->getSize().y();
 	}
 
 	return height;
@@ -368,18 +307,19 @@ float ComponentList::getTotalRowHeight() const
 {
 	float height = 0;
 	for(auto it = mEntries.cbegin(); it != mEntries.cend(); it++)
+	{
 		height += getRowHeight(it->data);
+	}
 
 	return height;
 }
 
-void ComponentList::updateElementPosition(const ComponentListRow& row, float yOffset)
+void ComponentList::updateElementPosition(const ComponentListRow& row)
 {
-	if (yOffset < 0)
+	float yOffset = 0;
+	for(auto it = mEntries.cbegin(); it != mEntries.cend() && &it->data != &row; it++)
 	{
-		yOffset = 0;
-		for (auto it = mEntries.cbegin(); it != mEntries.cend() && &it->data != &row; it++)
-			yOffset += getRowHeight(it->data);
+		yOffset += getRowHeight(it->data);
 	}
 
 	// assumes updateElementSize has already been called
@@ -456,12 +396,4 @@ bool ComponentList::moveCursor(int amt)
 	bool ret = listInput(amt);
 	listInput(0);
 	return ret;
-}
-
-std::string ComponentList::getSelectedUserData()
-{
-	if (mCursor >= 0 && mCursor < mEntries.size())
-		return mEntries[mCursor].object;
-
-	return "";
 }

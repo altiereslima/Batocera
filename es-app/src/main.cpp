@@ -1,7 +1,6 @@
 //EmulationStation, a graphical front-end for ROM browsing. Created by Alec "Aloshi" Lofquist.
 //http://www.aloshi.com
 
-#include "services/HttpServerThread.h"
 #include "guis/GuiDetectDevice.h"
 #include "guis/GuiMsgBox.h"
 #include "utils/FileSystemUtil.h"
@@ -13,6 +12,7 @@
 #include "MameNames.h"
 #include "platform.h"
 #include "PowerSaver.h"
+#include "ScraperCmdLine.h"
 #include "Settings.h"
 #include "SystemData.h"
 #include "SystemScreenSaver.h"
@@ -30,10 +30,6 @@
 #include "ThreadedHasher.h"
 #include <FreeImage.h>
 #include "ImageIO.h"
-#include "components/VideoVlcComponent.h"
-#include <csignal>
-#include "InputConfig.h"
-#include "RetroAchievements.h"
 
 #ifdef WIN32
 #include <Windows.h>
@@ -41,13 +37,12 @@
 #define PATH_MAX MAX_PATH
 #endif
 
-static std::string gPlayVideo;
-static int gPlayVideoDuration = 0;
+bool scrape_cmdline = false;
 
 bool parseArgs(int argc, char* argv[])
 {
 	Utils::FileSystem::setExePath(argv[0]);
-
+	
 	// We need to process --home before any call to Settings::getInstance(), because settings are loaded from homepath
 	for (int i = 1; i < argc; i++)
 	{
@@ -67,29 +62,7 @@ bool parseArgs(int argc, char* argv[])
 
 	for(int i = 1; i < argc; i++)
 	{
-		if (strcmp(argv[i], "--videoduration") == 0)
-		{
-			gPlayVideoDuration = atoi(argv[i + 1]);
-			i++; // skip the argument value
-		}
-		else if (strcmp(argv[i], "--video") == 0)
-		{
-			gPlayVideo = argv[i + 1];
-			i++; // skip the argument value
-		}
-		else if (strcmp(argv[i], "--monitor") == 0)
-		{
-			if (i >= argc - 1)
-			{
-				std::cerr << "Invalid monitor supplied.";
-				return false;
-			}
-
-			int monitorId = atoi(argv[i + 1]);
-			i++; // skip the argument value
-			Settings::getInstance()->setInt("MonitorID", monitorId);
-		}
-		else if(strcmp(argv[i], "--resolution") == 0)
+		if(strcmp(argv[i], "--resolution") == 0)
 		{
 			if(i >= argc - 2)
 			{
@@ -102,7 +75,6 @@ bool parseArgs(int argc, char* argv[])
 			i += 2; // skip the argument value
 			Settings::getInstance()->setInt("WindowWidth", width);
 			Settings::getInstance()->setInt("WindowHeight", height);
-			Settings::getInstance()->setBool("FullscreenBorderless", false);
 		}else if(strcmp(argv[i], "--screensize") == 0)
 		{
 			if(i >= argc - 2)
@@ -163,16 +135,10 @@ bool parseArgs(int argc, char* argv[])
 			Settings::getInstance()->setBool("Debug", true);
 			Settings::getInstance()->setBool("HideConsole", false);
 			// Log::setReportingLevel(LogDebug);
-		}
-		else if (strcmp(argv[i], "--fullscreen-borderless") == 0)
+		}else if(strcmp(argv[i], "--fullscreen-borderless") == 0)
 		{
 			Settings::getInstance()->setBool("FullscreenBorderless", true);
-		}
-		else if (strcmp(argv[i], "--fullscreen") == 0)
-		{
-		Settings::getInstance()->setBool("FullscreenBorderless", false);
-		}
-		else if(strcmp(argv[i], "--windowed") == 0)
+		}else if(strcmp(argv[i], "--windowed") == 0)
 		{
 			Settings::getInstance()->setBool("Windowed", true);
 		}else if(strcmp(argv[i], "--vsync") == 0)
@@ -180,6 +146,9 @@ bool parseArgs(int argc, char* argv[])
 			bool vsync = (strcmp(argv[i + 1], "on") == 0 || strcmp(argv[i + 1], "1") == 0) ? true : false;
 			Settings::getInstance()->setBool("VSync", vsync);
 			i++; // skip vsync value
+		}else if(strcmp(argv[i], "--scrape") == 0)
+		{
+			scrape_cmdline = true;
 		}else if(strcmp(argv[i], "--max-vram") == 0)
 		{
 			int maxVRAM = atoi(argv[i + 1]);
@@ -218,7 +187,8 @@ bool parseArgs(int argc, char* argv[])
 				"--draw-framerate		display the framerate\n"
 				"--no-exit			don't show the exit option in the menu\n"
 				"--no-splash			don't show the splash screen\n"
-				"--debug				more logging, show console on Windows\n"				
+				"--debug				more logging, show console on Windows\n"
+				"--scrape			scrape using command line interface\n"
 				"--windowed			not fullscreen, should be used with --resolution\n"
 				"--vsync [1/on or 0/off]		turn vsync on or off (default is on)\n"
 				"--max-vram [size]		Max VRAM to use in Mb before swapping. 0 for unlimited\n"
@@ -227,7 +197,6 @@ bool parseArgs(int argc, char* argv[])
 				"--force-disable-filters		Force the UI to ignore applied filters in gamelist\n"
 				"--home [path]		Directory to use as home path\n"
 				"--help, -h			summon a sentient, angry tuba\n\n"
-				"--monitor [index]			monitor index\n\n"				
 				"More information available in README.md.\n";
 			return false; //exit after printing help
 		}
@@ -239,7 +208,7 @@ bool parseArgs(int argc, char* argv[])
 bool verifyHomeFolderExists()
 {
 	//make sure the config directory exists	
-	std::string configDir = Utils::FileSystem::getEsConfigPath();
+	std::string configDir = Utils::FileSystem::getEsConfigPath(); // batocera
 	if(!Utils::FileSystem::exists(configDir))
 	{
 		std::cout << "Creating config directory \"" << configDir << "\"\n";
@@ -293,6 +262,7 @@ void onExit()
 #include <direct.h>
 #endif
 
+// batocera
 int setLocale(char * argv1)
 {
 #if WIN32
@@ -304,11 +274,10 @@ int setLocale(char * argv1)
 		EsLocale::init("", "/usr/share/locale");	
 #endif
 
-	setlocale(LC_TIME, "");
-
 	return 0;
 }
 
+#include <csignal>
 
 void signalHandler(int signum) 
 {
@@ -323,80 +292,6 @@ void signalHandler(int signum)
 
 	// cleanup and close up stuff here  
 	exit(signum);
-}
-
-void playVideo()
-{
-	ApiSystem::getInstance()->setReadyFlag(false);
-	Settings::getInstance()->setBool("AlwaysOnTop", true);
-
-	Window window;
-	if (!window.init(true))
-	{
-		LOG(LogError) << "Window failed to initialize!";
-		return;
-	}
-
-	Settings::getInstance()->setBool("VideoAudio", true);
-
-	bool exitLoop = false;
-
-	VideoVlcComponent vid(&window);
-	vid.setVideo(gPlayVideo);
-	vid.setOrigin(0.5f, 0.5f);
-	vid.setPosition(Renderer::getScreenWidth() / 2.0f, Renderer::getScreenHeight() / 2.0f);
-	vid.setMaxSize(Renderer::getScreenWidth(), Renderer::getScreenHeight());
-
-	vid.setOnVideoEnded([&exitLoop]()
-	{
-		exitLoop = true;
-		return false;
-	});
-
-	window.pushGui(&vid);
-
-	vid.onShow();
-	vid.topWindow(true);
-
-	int lastTime = SDL_GetTicks();
-	int totalTime = 0;
-
-	while (!exitLoop)
-	{
-		SDL_Event event;
-
-		if (SDL_PollEvent(&event))
-		{
-			do
-			{
-				if (event.type == SDL_QUIT)
-					return;
-			} 
-			while (SDL_PollEvent(&event));
-		}
-
-		int curTime = SDL_GetTicks();
-		int deltaTime = curTime - lastTime;
-
-		if (vid.isPlaying())
-		{
-			totalTime += deltaTime;
-
-			if (gPlayVideoDuration > 0 && totalTime > gPlayVideoDuration * 100)
-				break;
-		}
-
-		Transform4x4f transform = Transform4x4f::Identity();
-		vid.update(deltaTime);
-		vid.render(transform);
-
-		Renderer::swapBuffers();
-
-		if (ApiSystem::getInstance()->isReadyFlagSet())
-			break;
-	}
-
-	window.deinit(true);
 }
 
 int main(int argc, char* argv[])
@@ -457,12 +352,6 @@ int main(int argc, char* argv[])
 	if(!verifyHomeFolderExists())
 		return 1;
 
-	if (!gPlayVideo.empty())
-	{
-		playVideo();
-		return 0;
-	}
-	
 	//start the logger
 	Log::setupReportingLevel();
 	Log::init();	
@@ -472,10 +361,10 @@ int main(int argc, char* argv[])
 	atexit(&onExit);
 
 	// Set locale
-	setLocale(argv[0]);	
+	setLocale(argv[0]); // batocera
 
-	// metadata init
-	MetaDataList::initMetadata();
+	// metadata init    // batocera
+	MetaDataList::initMetadata();     // require locale
 
 	Window window;
 	SystemScreenSaver screensaver(&window);
@@ -483,24 +372,26 @@ int main(int argc, char* argv[])
 	ViewController::init(&window);
 	CollectionSystemManager::init(&window);
 	MameNames::init();
-
 	window.pushGui(ViewController::get());
-	if(!window.init())
-	{
-		LOG(LogError) << "Window failed to initialize!";
-		return 1;
-	}
-	
+
 	bool splashScreen = Settings::getInstance()->getBool("SplashScreen");
 	bool splashScreenProgress = Settings::getInstance()->getBool("SplashScreenProgress");
 
-	if (splashScreen)
+	if(!scrape_cmdline)
 	{
-		std::string progressText = _("Loading...");
-		if (splashScreenProgress)
-			progressText = _("Loading system config...");
+		if(!window.init())
+		{
+			LOG(LogError) << "Window failed to initialize!";
+			return 1;
+		}
 
-		window.renderSplashScreen(progressText);
+		if(splashScreen)
+		{
+		  std::string progressText = _("Loading..."); // batocera
+			if (splashScreenProgress)
+			  progressText = _("Loading system config..."); // batocera
+			window.renderLoadingScreen(progressText);
+		}
 	}
 
 	const char* errorMsg = NULL;
@@ -510,24 +401,44 @@ int main(int argc, char* argv[])
 		if(errorMsg == NULL)
 		{
 			LOG(LogError) << "Unknown error occured while parsing system config file.";
-			Renderer::deinit();
+			if(!scrape_cmdline)
+				Renderer::deinit();
 			return 1;
 		}
 
 		// we can't handle es_systems.cfg file problems inside ES itself, so display the error message then quit
-		window.pushGui(new GuiMsgBox(&window, errorMsg, _("QUIT"), [] { quitES(); }));
+		window.pushGui(new GuiMsgBox(&window,
+			errorMsg,
+			_("QUIT"), [] { // batocera
+				SDL_Event* quit = new SDL_Event();
+				quit->type = SDL_QUIT;
+				SDL_PushEvent(quit);
+			}));
 	}
 
-	SystemConf* systemConf = SystemConf::getInstance();
+	SystemConf* systemConf = SystemConf::getInstance(); // batocera
 
+// batocera
 #ifdef _ENABLE_KODI_
-	if (systemConf->getBool("kodi.enabled", true) && systemConf->getBool("kodi.atstartup"))
+	if(systemConf->get("kodi.enabled") != "0" && systemConf->get("kodi.atstartup") == "1"){
 		ApiSystem::getInstance()->launchKodi(&window);
+	}
 #endif
 
-	InputConfig::AssignActionButtons();
+	ApiSystem::getInstance()->getIpAdress(); // batocera
 
-	ApiSystem::getInstance()->getIpAdress();
+#ifndef WIN32
+	// batocera
+	// UPDATE CHECK THREAD
+	if(systemConf->get("updates.enabled") == "1")
+		NetworkThread * nthread = new NetworkThread(&window);
+#endif
+
+	//run the command line scraper then quit
+	if(scrape_cmdline)
+	{
+		return run_scraper_cmdline();
+	}
 
 	//dont generate joystick events while we're loading (hopefully fixes "automatically started emulator" bug)
 	SDL_JoystickEventState(SDL_DISABLE);
@@ -536,31 +447,32 @@ int main(int argc, char* argv[])
 	// this makes for no delays when accessing content, but a longer startup time
 	ViewController::get()->preload();
 
-	NetworkThread* nthread = new NetworkThread(&window);
-	HttpServerThread httpServer(&window);
-
 	if(splashScreen && splashScreenProgress)
-		window.renderSplashScreen(_("Done."));
+	  window.renderLoadingScreen(_("Done.")); // batocera
 
-	// Choose which GUI to open depending on if an input configuration already exists
+
+	//choose which GUI to open depending on if an input configuration already exists
 	if(errorMsg == NULL)
 	{
 		if(Utils::FileSystem::exists(InputManager::getConfigPath()) && InputManager::getInstance()->getNumConfiguredDevices() > 0)
+		{
 			ViewController::get()->goToStart(true);
-		else
+		}else{
 			window.pushGui(new GuiDetectDevice(&window, true, [] { ViewController::get()->goToStart(true); }));
+		}
 	}
 
-	// Generate joystick events since we're done loading
+	//generate joystick events since we're done loading
 	SDL_JoystickEventState(SDL_ENABLE);
-	SDL_StopTextInput();
 
-	window.closeSplashScreen();
+	window.endRenderLoadingScreen();
 
+	// batocera
 	// Create a flag in  temporary directory to signal READY state
-	ApiSystem::getInstance()->setReadyFlag();
+	FILE* fd = fopen("/tmp/emulationstation.ready", "w");
+	if (fd != NULL) { fclose(fd); }
 
-	// Play music
+	// batocera, play music
 	AudioManager::getInstance()->init();
 
 	if (ViewController::get()->getState().viewing == ViewController::GAME_LIST || ViewController::get()->getState().viewing == ViewController::SYSTEM_SELECT)
@@ -568,35 +480,15 @@ int main(int argc, char* argv[])
 	else
 		AudioManager::getInstance()->playRandomMusic();
 
-#ifdef WIN32	
-	DWORD displayFrequency = 60;
-
-	DEVMODE lpDevMode;
-	memset(&lpDevMode, 0, sizeof(DEVMODE));
-	lpDevMode.dmSize = sizeof(DEVMODE);
-	lpDevMode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY;
-	lpDevMode.dmDriverExtra = 0;
-
-	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) != 0) {
-		displayFrequency = lpDevMode.dmDisplayFrequency; // default value if cannot retrieve from user settings.
-	}
-
-	int timeLimit = (1000 / displayFrequency) - 8;	 // Margin for vsync
-	if (timeLimit < 0)
-		timeLimit = 0;
-#endif
-
 	int lastTime = SDL_GetTicks();
 	int ps_time = SDL_GetTicks();
 
 	bool running = true;
+	bool doReboot = false;
+	bool doShutdown = false;
 
 	while(running)
 	{
-#ifdef WIN32	
-		int processStart = SDL_GetTicks();
-#endif
-
 		SDL_Event event;
 
 		bool ps_standby = PowerSaver::getState() && (int) SDL_GetTicks() - ps_time > PowerSaver::getMode();
@@ -610,10 +502,30 @@ int main(int argc, char* argv[])
 			{
 				TRYCATCH("InputManager::parseEvent", InputManager::getInstance()->parseEvent(event, &window));
 
-				if (event.type == SDL_QUIT)
-					running = false;
-			} 
-			while(SDL_PollEvent(&event));
+				switch(event.type) {
+				case SDL_QUIT:
+				  running = false;
+				  break;
+				case ApiSystem::SDL_FAST_QUIT | ApiSystem::SDL_SYS_REBOOT:
+				  running = false;
+				  doReboot = true;
+				  Settings::getInstance()->setBool("IgnoreGamelist", true);
+				  break;
+				case ApiSystem::SDL_FAST_QUIT | ApiSystem::SDL_SYS_SHUTDOWN:
+				  running = false;
+				  doShutdown = true;
+				  Settings::getInstance()->setBool("IgnoreGamelist", true);
+				  break;
+				case SDL_QUIT | ApiSystem::SDL_SYS_REBOOT:
+				  running = false;
+				  doReboot = true;
+				  break;
+				case SDL_QUIT | ApiSystem::SDL_SYS_SHUTDOWN:
+				  running = false;
+				  doShutdown = true;
+				  break;
+				}
+			} while(SDL_PollEvent(&event));
 
 			// triggered if exiting from SDL_WaitEvent due to event
 			if (ps_standby)
@@ -648,23 +560,10 @@ int main(int argc, char* argv[])
 		TRYCATCH("Window.update" ,window.update(deltaTime))	
 		TRYCATCH("Window.render", window.render())
 
-#ifdef WIN32		
-		int processDuration = SDL_GetTicks() - processStart;
-		if (processDuration < timeLimit)
-		{
-			int timeToWait = timeLimit - processDuration;
-			if (timeToWait > 0 && timeToWait < 25 && Settings::getInstance()->getBool("VSync"))
-				Sleep(timeToWait);
-		}
-#endif
-
 		Renderer::swapBuffers();
 
 		Log::flush();
 	}
-
-	if (isFastShutdown())
-		Settings::getInstance()->setBool("IgnoreGamelist", true);
 
 	ThreadedHasher::stop();
 	ThreadedScraper::stop();
@@ -673,11 +572,10 @@ int main(int argc, char* argv[])
 		delete window.peekGui();
 
 	if (SystemData::hasDirtySystems())
-		window.renderSplashScreen(_("SAVING METADATAS. PLEASE WAIT..."));
+		window.renderLoadingScreen(_("SAVING METADATAS. PLEASE WAIT..."));
 
 	ImageIO::saveImageCache();
 	MameNames::deinit();
-	ViewController::saveState();
 	CollectionSystemManager::deinit();
 	SystemData::deleteSystems();
 
@@ -688,9 +586,19 @@ int main(int argc, char* argv[])
 
 	window.deinit();
 
-	processQuitMode();
 	LOG(LogInfo) << "EmulationStation cleanly shutting down.";
 
+	// batocera
+	int ret; // necessary to eliminate ugly compile warning
+	if (doReboot) {
+		LOG(LogInfo) << "Rebooting system";
+		ret = system("touch /tmp/reboot.please");
+		ret = system("shutdown -r now");
+	} else if (doShutdown) {
+		LOG(LogInfo) << "Shutting system down";
+		ret = system("touch /tmp/shutdown.please");
+		ret = system("shutdown -h now");
+	}
+	
 	return 0;
 }
-

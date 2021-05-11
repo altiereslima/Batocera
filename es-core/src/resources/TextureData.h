@@ -24,7 +24,6 @@ public:
 
 	// Read the data into memory if necessary
 	bool load(bool updateCache = false);
-	bool loadFromCbz();
 
 	bool isLoaded();
 
@@ -60,14 +59,9 @@ public:
 
 	inline const std::string& getPath() { return mPath; };
 
-	bool updateFromExternalRGBA(unsigned char* dataRGBA, size_t width, size_t height);
-
-	bool isRequired() { return mRequired; };
-	void setRequired(bool value) { mRequired = value; };
+	bool initFromExternalRGBA(unsigned char* dataRGBA, size_t width, size_t height);
 
 private:
-	bool			mRequired;
-
 	std::mutex		mMutex;
 	bool			mTile;
 	bool			mLinear;

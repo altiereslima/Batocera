@@ -7,13 +7,9 @@
 #include "Log.h"
 #include <nanosvg/nanosvg.h>
 #include <nanosvg/nanosvgrast.h>
+#include <assert.h>
 #include <string.h>
 #include "Settings.h"
-
-#include <algorithm>
-#include "utils/ZipFile.h"
-#include "utils/StringUtil.h"
-#include "utils/FileSystemUtil.h"
 
 #define DPI 96
 
@@ -24,7 +20,6 @@ TextureData::TextureData(bool tile, bool linear) : mTile(tile), mLinear(linear),
 									  mPackedSize(Vector2i(0, 0)), mBaseSize(Vector2i(0, 0))
 {
 	mIsExternalDataRGBA = false;
-	mRequired = false;
 }
 
 TextureData::~TextureData()
@@ -50,9 +45,7 @@ bool TextureData::initSVGFromMemory(const unsigned char* fileData, size_t length
 
 	// nsvgParse excepts a modifiable, null-terminated string
 	char* copy = (char*)malloc(length + 1);
-	if (copy == NULL)
-		return false;
-	
+	assert(copy != NULL);
 	memcpy(copy, fileData, length);
 	copy[length] = '\0';
 
@@ -191,7 +184,7 @@ bool TextureData::initFromRGBA(unsigned char* dataRGBA, size_t width, size_t hei
 	return true;
 }
 
-bool TextureData::updateFromExternalRGBA(unsigned char* dataRGBA, size_t width, size_t height)
+bool TextureData::initFromExternalRGBA(unsigned char* dataRGBA, size_t width, size_t height)
 {
 	// If already initialised then don't read again
 	std::unique_lock<std::mutex> lock(mMutex);
@@ -205,63 +198,9 @@ bool TextureData::updateFromExternalRGBA(unsigned char* dataRGBA, size_t width, 
 	mHeight = height;
 
 	if (mTextureID != 0)
-		Renderer::updateTexture(mTextureID, Renderer::Texture::RGBA, 0, 0, mWidth, mHeight, mDataRGBA);
+		Renderer::updateTexture(mTextureID, Renderer::Texture::RGBA, -1, -1, mWidth, mHeight, mDataRGBA);
 
 	return true;
-}
-
-static std::mutex mCbzMutex;
-
-bool TextureData::loadFromCbz()
-{
-	std::unique_lock<std::mutex> lock(mCbzMutex);
-
-	bool retval = false;
-
-	std::vector<Utils::Zip::ZipInfo> files;
-
-	Utils::Zip::ZipFile zipFile;
-	if (zipFile.load(mPath))
-	{
-		for (auto file : zipFile.infolist())
-		{
-			auto ext = Utils::String::toLower(Utils::FileSystem::getExtension(file.filename));
-			if (ext != ".jpg")
-				continue;
-
-			if (Utils::String::startsWith(file.filename, "__"))
-				continue;
-
-			files.push_back(file);
-		}
-
-		std::sort(files.begin(), files.end(), [](const Utils::Zip::ZipInfo& a, const Utils::Zip::ZipInfo& b) { return Utils::String::toLower(a.filename) < Utils::String::toLower(b.filename); });
-	}
-
-	if (files.size() > 0 && files[0].file_size > 0)
-	{
-		size_t size = files[0].file_size;
-		unsigned char* buffer = new unsigned char[size];
-
-		Utils::Zip::zip_callback func = [](void *pOpaque, unsigned long long ofs, const void *pBuf, size_t n)
-		{
-			unsigned char* pSource = (unsigned char*)pBuf;
-			unsigned char* pDest = (unsigned char*)pOpaque;
-
-			memcpy(pDest + ofs, pSource, n);
-
-			return n;
-		};
-
-		zipFile.readBuffered(files[0].filename, func, buffer);
-
-		retval = initImageFromMemory(buffer, size);
-
-		if (retval)
-			ImageIO::updateImageCache(mPath, Utils::FileSystem::getFileSize(mPath), mBaseSize.x(), mBaseSize.y());
-	}
-
-	return retval;
 }
 
 bool TextureData::load(bool updateCache)
@@ -273,9 +212,6 @@ bool TextureData::load(bool updateCache)
 	{
 		LOG(LogDebug) << "TextureData::load " << mPath;
 
-		if (mPath.substr(mPath.size() - 4, std::string::npos) == ".cbz")
-			return loadFromCbz();
-		
 		std::shared_ptr<ResourceManager>& rm = ResourceManager::getInstance();
 		const ResourceData& data = rm->getFileData(mPath);
 		// is it an SVG?
@@ -306,17 +242,20 @@ bool TextureData::uploadAndBind()
 {
 	// See if it's already been uploaded
 	std::unique_lock<std::mutex> lock(mMutex);
-
 	if (mTextureID != 0)
+	{
 		Renderer::bindTexture(mTextureID);
+	}
 	else
 	{
-		// Make sure we're ready to upload
-		if (mWidth == 0 || mHeight == 0 || mDataRGBA == nullptr)
+		// Load it if necessary
+		if (!mDataRGBA)
 		{
-			Renderer::bindTexture(mTextureID);
 			return false;
 		}
+		// Make sure we're ready to upload
+		if ((mWidth == 0) || (mHeight == 0) || (mDataRGBA == nullptr))
+			return false;
 
 		// Upload texture
 		mTextureID = Renderer::createTexture(Renderer::Texture::RGBA, mLinear, mTile, mWidth, mHeight, mDataRGBA);
@@ -328,7 +267,6 @@ bool TextureData::uploadAndBind()
 			mDataRGBA = nullptr;
 		}
 	}
-
 	return true;
 }
 
@@ -398,7 +336,6 @@ void TextureData::setSourceSize(float width, float height)
 			mSourceHeight = height;
 			releaseVRAM();
 			releaseRAM();
-			load();
 		}
 	}
 }

@@ -1,16 +1,11 @@
 #include "utils/TimeUtil.h"
+
 #include <time.h>
-#include "LocaleES.h"
 
 namespace Utils
 {
 	namespace Time
 	{
-		DateTime DateTime::now()
-		{
-			return Utils::Time::DateTime(Utils::Time::now());
-		}
-
 		DateTime::DateTime()
 		{
 			mTime       = 0;
@@ -69,22 +64,6 @@ namespace Utils
 			setTime(stringToTime(_isoString));
 
 		} // DateTime::setIsoString
-
-		double	DateTime::elapsedSecondsSince(const DateTime& _since)
-		{
-			return difftime(mTime, _since.mTime);
-		}
-
-		std::string DateTime::toLocalTimeString()
-		{
-			time_t     clockNow = getTime();
-			struct tm  clockTstruct = *localtime(&clockNow);
-
-			char       clockBuf[256];
-			strftime(clockBuf, sizeof(clockBuf), "%Ex %R", &clockTstruct);
-			return clockBuf;
-		}
-
 
 		Duration::Duration(const time_t& _time)
 		{
@@ -264,24 +243,6 @@ namespace Utils
 						}
 						break;
 
-						case 'I': // The hour (12-hour clock) [00,12]
-						{
-							int h = timeStruct.tm_hour;
-							if (h >= 12)
-								h -= 12;
-
-							*s++ = (char)(h / 10) + '0';
-							*s++ = (char)(h % 10) + '0';
-						}
-						break;
-
-						case 'p': // AM / PM
-						{
-							*s++ = timeStruct.tm_hour < 12 ? 'A' : 'P';
-							*s++ = 'M';
-						}
-						break;
-
 						case 'M': // The minute [00,59]
 						{
 							*s++ = (char)(timeStruct.tm_min / 10) + '0';
@@ -309,36 +270,16 @@ namespace Utils
 
 		} // timeToString
 
-		  // transforms a number of seconds into a human readable string
 		std::string secondsToString(const long seconds)
 		{
-			if (seconds == 0)
-				return _("never");
-
-			char buf[256];
-
-			int h = 0, m = 0, s = 0;
-			h = (seconds / 3600) % 24;
-			m = (seconds / 60) % 60;
+		// transforms a number of seconds into HH:MM:SS
+			int h=0, m=0, s=0;
+			h = (seconds/3600) % 24;
+			m = (seconds/60) % 60;
 			s = seconds % 60;
-			
-			if (h > 0)
-			{
-				snprintf(buf, 256, _("%d h").c_str(), h);
-				if (m > 0)
-				{
-					std::string hours(buf);
-					snprintf(buf, 256, _("%d m").c_str(), m);
-					return hours + " " + std::string(buf);
-				}
-			}
-			else if (m > 0)
-				snprintf(buf, 256, _("%d m").c_str(), m);
-			else 
-				snprintf(buf, 256, _("%d s").c_str(), s);
+			return std::to_string(h) + ":" + std::to_string(m) + ":" + std::to_string(s);
 
-			return std::string(buf);	
-		}
+		} //secondsToString
 
 		int daysInMonth(const int _year, const int _month)
 		{

@@ -89,13 +89,7 @@ private:
 					if (!it->description.empty())
 						row.addElement(std::make_shared<MultiLineMenuEntry>(mWindow, Utils::String::toUpper(it->name), it->description), true);
 					else
-					{
-						auto text = std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(it->name), font, color);
-						if (EsLocale::isRTL())
-							text->setHorizontalAlignment(Alignment::ALIGN_RIGHT);
-
-						row.addElement(text, true);
-					}
+						row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(it->name), font, color), true);
 
 					if (mParent->mMultiSelect)
 					{
@@ -135,7 +129,7 @@ private:
 					mMenu.addGroup(e.group);
 
 				// also set cursor to this row if we're not multi-select and this row is selected
-				mMenu.addRow(row, (!mParent->mMultiSelect && it->selected), false);
+				mMenu.addRow(row, (!mParent->mMultiSelect && it->selected));
 			}
 
 			mMenu.addButton(_("BACK"), _("accept"), [this] { delete this; }); // batocera
@@ -199,7 +193,6 @@ public:
 		mText.setFont(theme->Text.font);
 		mText.setColor(theme->Text.color);
 		mText.setHorizontalAlignment(ALIGN_CENTER);
-
 		addChild(&mText);
 
 		mLeftArrow.setResize(0, mText.getFont()->getLetterHeight());
@@ -207,19 +200,9 @@ public:
 
 		if(mMultiSelect)
 		{
-			if (EsLocale::isRTL())
-			{
-				mLeftArrow.setImage(ThemeData::getMenuTheme()->Icons.arrow);
-				mLeftArrow.setColorShift(theme->Text.color);
-				mLeftArrow.setFlipX(true);
-				addChild(&mLeftArrow);
-			}
-			else
-			{
-				mRightArrow.setImage(ThemeData::getMenuTheme()->Icons.arrow);
-				mRightArrow.setColorShift(theme->Text.color);
-				addChild(&mRightArrow);
-			}
+			mRightArrow.setImage(ThemeData::getMenuTheme()->Icons.arrow);
+			mRightArrow.setColorShift(theme->Text.color);
+			addChild(&mRightArrow);
 		}
 		else
 		{
@@ -362,14 +345,11 @@ public:
 		mEntries.push_back(e);
 		onSelectedChanged();
 	}
-	void add(const std::string name, const T& obj, bool selected, bool distinct = true)
+	void add(const std::string name, const T& obj, bool selected)
 	{
-		if (distinct)
-		{
-			for (auto sysIt = mEntries.cbegin(); sysIt != mEntries.cend(); sysIt++)
-				if (sysIt->name == name)
-					return;
-		}
+		for (auto sysIt = mEntries.cbegin(); sysIt != mEntries.cend(); sysIt++)
+			if (sysIt->name == name)
+				return;
 
 		OptionListData e;
 		e.name = name;
@@ -385,24 +365,6 @@ public:
 
 		mEntries.push_back(e);
 		onSelectedChanged();
-	}
-
-	void addRange(const std::vector<std::string> values, const std::string selectedValue = "")
-	{
-		for (auto value : values)
-			add(_(value.c_str()), value, selectedValue == value);
-
-		if (!hasSelection())
-			selectFirstItem();
-	}
-
-	void addRange(const std::vector<std::pair<std::string, T>> values, const T selectedValue)
-	{
-		for (auto value : values)
-			add(value.first.c_str(), value.second, selectedValue == value.second);
-
-		if (!hasSelection())
-			selectFirstItem();
 	}
 
 	void addGroup(const std::string name)
@@ -467,12 +429,6 @@ public:
 		return false;
 	}
 
-	int size()
-	{
-		return (int)mEntries.size();
-	}
-
-	//size_type
 	void selectFirstItem()
 	{
 		for (unsigned int i = 0; i < mEntries.size(); i++)

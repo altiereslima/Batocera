@@ -9,7 +9,6 @@
 #include <fstream>
 #include <map>
 #include <mutex>
-#include "renderers/Renderer.h"
 
 unsigned char* ImageIO::loadFromMemoryRGBA32(const unsigned char * data, const size_t size, size_t & width, size_t & height, MaxSizeInfo* maxSize, Vector2i* baseSize, Vector2i* packedSize)
 {
@@ -57,10 +56,6 @@ unsigned char* ImageIO::loadFromMemoryRGBA32(const unsigned char * data, const s
 					if (maxSize != nullptr && maxSize->x() > 0 && maxSize->y() > 0 && (width > maxSize->x() || height > maxSize->y()))
 					{
 						Vector2i sz = adjustPictureSize(Vector2i(width, height), Vector2i(maxSize->x(), maxSize->y()), maxSize->externalZoom());
-
-						if (sz.x() > Renderer::getScreenWidth() || sz.y() > Renderer::getScreenHeight())
-							sz = adjustPictureSize(sz, Vector2i(Renderer::getScreenWidth(), Renderer::getScreenHeight()), false);
-						
 						if (sz.x() != width || sz.y() != height)
 						{
 							LOG(LogDebug) << "ImageIO : rescaling image from " << std::string(std::to_string(width) + "x" + std::to_string(height)).c_str() << " to " << std::string(std::to_string(sz.x()) + "x" + std::to_string(sz.y())).c_str();
@@ -220,13 +215,6 @@ std::string getImageCacheFilename()
 	return Utils::FileSystem::getEsConfigPath() + "/imagecache.db";
 }
 
-void ImageIO::clearImageCache()
-{
-	std::string fname = getImageCacheFilename();
-	Utils::FileSystem::removeFile(fname);
-	sizeCache.clear();
-}
-
 void ImageIO::loadImageCache()
 {
 	std::string fname = getImageCacheFilename();
@@ -235,12 +223,10 @@ void ImageIO::loadImageCache()
 	if (f.fail())
 		return;
 
-	sizeCache.clear();
-
 #if WIN32
 	std::string relativeTo = Utils::FileSystem::getParent(Utils::FileSystem::getHomePath());
 #else
-	std::string relativeTo = "/userdata";	
+	std::string relativeTo = "/userdata/";	
 #endif
 
 	std::string line;
@@ -249,7 +235,8 @@ void ImageIO::loadImageCache()
 		auto splits = Utils::String::split(line, '|');
 		if (splits.size() == 4)
 		{
-			std::string file = Utils::FileSystem::resolveRelativePath(splits[0], relativeTo, true);
+			std::string file = splits[0];
+			file = Utils::FileSystem::resolveRelativePath(splits[0], relativeTo, true);
 
 			CachedFileInfo fi;
 			fi.size = atoi(splits[1].c_str());
@@ -261,16 +248,6 @@ void ImageIO::loadImageCache()
 	}
 
 	f.close();
-}
-
-static bool _isCachablePath(const std::string& path)
-{
-	return 
-		path.find("/themes/") == std::string::npos && 
-		path.find("/tmp/") != std::string::npos &&
-		path.find("/emulationstation.tmp/") != std::string::npos &&
-		path.find("/pdftmp/") == std::string::npos && 
-		path.find("/saves/") != std::string::npos;
 }
 
 void ImageIO::saveImageCache()
@@ -286,7 +263,7 @@ void ImageIO::saveImageCache()
 #if WIN32
 	std::string relativeTo = Utils::FileSystem::getParent(Utils::FileSystem::getHomePath());
 #else
-	std::string relativeTo = "/userdata";
+	std::string relativeTo = "/userdata/";
 #endif
 
 	for (auto it : sizeCache)
@@ -294,10 +271,12 @@ void ImageIO::saveImageCache()
 		if (it.second.size < 0)
 			continue;
 
-		if (!_isCachablePath(it.first))
+		if (it.first.find("/themes/") != std::string::npos)
 			continue;
 
-		std::string path = Utils::FileSystem::createRelativePath(it.first, relativeTo, true); 
+		std::string path = Utils::FileSystem::createRelativePath(it.first, "_path_", true);
+		if (path[0] != '~')
+			path = Utils::FileSystem::createRelativePath(it.first, relativeTo, false);
 
 		f << path;
 		f << "|";
@@ -314,15 +293,6 @@ void ImageIO::saveImageCache()
 
 static std::mutex sizeCacheLock;
 
-void ImageIO::removeImageCache(const std::string fn)
-{
-	std::unique_lock<std::mutex> lock(sizeCacheLock);
-
-	auto it = sizeCache.find(fn);
-	if (it != sizeCache.cend())
-		sizeCache.erase(fn);
-}
-
 void ImageIO::updateImageCache(const std::string fn, int sz, int x, int y)
 {
 	std::unique_lock<std::mutex> lock(sizeCacheLock);
@@ -338,7 +308,7 @@ void ImageIO::updateImageCache(const std::string fn, int sz, int x, int y)
 			item.y = y;
 			item.size = sz;
 
-			if (sz > 0 && x > 0 && _isCachablePath(fn))
+			if (sz > 0 && x > 0 && fn.find("/themes/") == std::string::npos)
 				sizeCacheDirty = true;
 		}
 	}
@@ -346,7 +316,7 @@ void ImageIO::updateImageCache(const std::string fn, int sz, int x, int y)
 	{
 		sizeCache[fn] = CachedFileInfo(sz, x, y);
 
-		if (sz > 0 && x > 0 && _isCachablePath(fn))
+		if (sz > 0 && x > 0 && fn.find("/themes/") == std::string::npos)
 			sizeCacheDirty = true;
 	}
 }
@@ -380,12 +350,7 @@ bool ImageIO::loadImageSize(const char *fn, unsigned int *x, unsigned int *y)
 
 	auto size = Utils::FileSystem::getFileSize(fn);
 
-#if WIN32
-	FILE *f = _fsopen(fn, "rb", _SH_DENYNO);
-#else
 	FILE *f = fopen(fn, "rb");
-#endif
-
 	if (f == 0)
 	{
 		LOG(LogWarning) << "ImageIO::loadImageSize\tUnable to open file";

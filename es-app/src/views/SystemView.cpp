@@ -16,11 +16,7 @@
 #include "components/VideoComponent.h"
 #include "components/VideoVlcComponent.h"
 #include "guis/GuiNetPlay.h"
-#include "Playlists.h"
-#include "CollectionSystemManager.h"
-#include "resources/TextureDataManager.h"
-#include "guis/GuiTextEditPopup.h"
-#include "guis/GuiTextEditPopupKeyboard.h"
+#include <random>
 
 // buffer values for scrolling velocity (left, stopped, right)
 const int logoBuffersLeft[] = { -5, -2, -1 };
@@ -28,15 +24,18 @@ const int logoBuffersRight[] = { 1, 2, 5 };
 
 SystemView::SystemView(Window* window) : IList<SystemViewData, SystemData*>(window, LIST_SCROLL_STYLE_SLOW, LIST_ALWAYS_LOOP),
 										 mViewNeedsReload(true),
-										 mSystemInfo(window, _("SYSTEM INFO"), Font::get(FONT_SIZE_SMALL), 0x33333300, ALIGN_CENTER), mYButton("y")
+										 mSystemInfo(window, "SYSTEM INFO", Font::get(FONT_SIZE_SMALL), 0x33333300, ALIGN_CENTER)
 {
 	mCamOffset = 0;
 	mExtrasCamOffset = 0;
 	mExtrasFadeOpacity = 0.0f;
-	mExtrasFadeMove = 0.0f;	
+	launchKodi = false; // batocera
 	mScreensaverActive = false;
-	mDisable = false;		
+	mDisable = false;	
+	mShowing = false;
 	mLastCursor = 0;
+	mStaticBackground = nullptr;
+	mStaticVideoBackground = nullptr;
 	mExtrasFadeOldCursor = -1;
 	
 	setSize((float)Renderer::getScreenWidth(), (float)Renderer::getScreenHeight());
@@ -45,11 +44,17 @@ SystemView::SystemView(Window* window) : IList<SystemViewData, SystemData*>(wind
 
 SystemView::~SystemView()
 {
-	for (auto sb : mStaticVideoBackgrounds) delete sb;
-	mStaticVideoBackgrounds.clear();
+	if (mStaticVideoBackground != nullptr)
+	{
+		delete mStaticVideoBackground;
+		mStaticVideoBackground = nullptr;
+	}
 
-	for(auto sb : mStaticBackgrounds) delete sb;
-	mStaticBackgrounds.clear();
+	if (mStaticBackground != nullptr)
+	{
+		delete mStaticBackground;
+		mStaticBackground = nullptr;
+	}
 
 	clearEntries();
 }
@@ -58,8 +63,6 @@ void SystemView::clearEntries()
 {
 	for (int i = 0; i < mEntries.size(); i++)
 	{
-		setExtraRequired(i, false);
-
 		for (auto extra : mEntries[i].data.backgroundExtras)
 			delete extra;
 
@@ -69,90 +72,103 @@ void SystemView::clearEntries()
 	mEntries.clear();
 }
 
-void SystemView::reloadTheme(SystemData* system)
+class SystemRandomPlaylist : public IPlaylist
 {
-	const std::shared_ptr<ThemeData>& theme = system->getTheme();
-	getViewElements(theme);
-
-	for (auto& e : mEntries)
+public:
+	enum PlaylistType
 	{
-		if (e.object != system)
-			continue;
+		IMAGE,
+		THUMBNAIL,
+		MARQUEE,
+		VIDEO
+	};
+
+	SystemRandomPlaylist(SystemData* system, PlaylistType type) : mMt19937(mRandomDevice())
+	{
+		mFirstRun = true;
+		mSystem = system;
+		mType = type;
+	}
 		
-		if (e.data.logo != nullptr)
-		{
-			if (e.data.logo->isKindOf<TextComponent>())
-				e.data.logo->applyTheme(theme, "system", "logoText", ThemeFlags::FONT_PATH | ThemeFlags::FONT_SIZE | ThemeFlags::COLOR | ThemeFlags::FORCE_UPPERCASE | ThemeFlags::LINE_SPACING | ThemeFlags::TEXT);
-			else
-				e.data.logo->applyTheme(theme, "system", "logo", ThemeFlags::COLOR | ThemeFlags::ALIGNMENT | ThemeFlags::VISIBLE);
-		}
-
-		loadExtras(system, e);
-	}
-}
-
-void SystemView::loadExtras(SystemData* system, IList<SystemViewData, SystemData*>::Entry& e)
-{
-	// delete any existing extras
-	for (auto extra : e.data.backgroundExtras)
-		delete extra;
-
-	e.data.backgroundExtras.clear();
-
-	// make background extras
-	e.data.backgroundExtras = ThemeData::makeExtras(system->getTheme(), "system", mWindow);
-
-	for (auto extra : e.data.backgroundExtras)
+	std::string getNextItem()
 	{
-		if (extra->isKindOf<VideoComponent>())
+		if (mFirstRun)
 		{
-			auto elem = system->getTheme()->getElement("system", extra->getTag(), "video");
-			if (elem != nullptr && elem->has("path") && Utils::String::startsWith(elem->get<std::string>("path"), "{random"))
-				((VideoComponent*)extra)->setPlaylist(std::make_shared<SystemRandomPlaylist>(system, SystemRandomPlaylist::VIDEO));
-			else if (elem != nullptr && elem->has("path") && Utils::String::toLower(Utils::FileSystem::getExtension(elem->get<std::string>("path"))) == ".m3u")
-				((VideoComponent*)extra)->setPlaylist(std::make_shared<M3uPlaylist>(elem->get<std::string>("path")));
-		}
-		else if (extra->isKindOf<ImageComponent>())
-		{
-			auto elem = system->getTheme()->getElement("system", extra->getTag(), "image");
-			if (elem != nullptr && elem->has("path") && Utils::String::startsWith(elem->get<std::string>("path"), "{random"))
+			std::vector<FileData*> files = mSystem->getRootFolder()->getFilesRecursive(GAME, false);
+
+			for (auto file : files)
 			{
-				std::string src = elem->get<std::string>("path");
+				switch (mType)
+				{
+				case IMAGE:
+					if (!file->getImagePath().empty())
+						mPaths.push_back(file->getImagePath());
+					break;
 
-				SystemRandomPlaylist::PlaylistType type = SystemRandomPlaylist::IMAGE;
+				case THUMBNAIL:
+					if (!file->getThumbnailPath().empty())
+						mPaths.push_back(file->getThumbnailPath());
+					break;
 
-				if (src == "{random:thumbnail}")
-					type = SystemRandomPlaylist::THUMBNAIL;
-				else if (src == "{random:marquee}")
-					type = SystemRandomPlaylist::MARQUEE;
-				else if (src == "{random:fanart}")
-					type = SystemRandomPlaylist::FANART;
-				else if (src == "{random:titleshot}")
-					type = SystemRandomPlaylist::TITLESHOT;
+				case MARQUEE:
+					if (!file->getMarqueePath().empty())
+						mPaths.push_back(file->getMarqueePath());
+					break;
 
-				((ImageComponent*)extra)->setPlaylist(std::make_shared<SystemRandomPlaylist>(system, type));
-			}
-			else if (elem != nullptr && elem->has("path") && Utils::String::toLower(Utils::FileSystem::getExtension(elem->get<std::string>("path"))) == ".m3u")
-			{
-				((ImageComponent*)extra)->setAllowFading(false);
-				((ImageComponent*)extra)->setPlaylist(std::make_shared<M3uPlaylist>(elem->get<std::string>("path")));
+				case VIDEO:
+					if (!file->getVideoPath().empty())
+						mPaths.push_back(file->getVideoPath());
+					break;
+				}
 			}
 
+			if (mPaths.size() > 0)
+				mUniformDistribution = std::uniform_int_distribution<int>(0, mPaths.size() - 1);
+
+			mFirstRun = false;
 		}
+
+		if (mPaths.size() > 0)
+		{
+			int idx = mUniformDistribution(mMt19937);
+			if (idx >= 0 && idx < mPaths.size() && Utils::FileSystem::exists(mPaths[idx]))						
+				return mPaths[idx];
+
+			// File not found ? Try the next file...
+			int stopidx = idx;
+
+			idx++;
+			if (idx >= mPaths.size())
+				idx = 0;
+
+			while (idx != stopidx && idx < mPaths.size() && !Utils::FileSystem::exists(mPaths[idx]))
+			{			
+				idx++;
+				if (idx >= mPaths.size())
+					idx = 0;
+			}
+
+			if (idx >= 0 && idx < mPaths.size() && Utils::FileSystem::exists(mPaths[idx]))
+				return mPaths[idx];
+		}
+
+		return "";
 	}
+	
+private:
+	SystemData*		mSystem;
+	bool			mFirstRun;
+	PlaylistType	mType;
 
-	// sort the extras by z-index
-	std::stable_sort(e.data.backgroundExtras.begin(), e.data.backgroundExtras.end(), [](GuiComponent* a, GuiComponent* b) {
-		return b->getZIndex() > a->getZIndex();
-	});
+	std::vector<std::string> mPaths;
 
-	SystemRandomPlaylist::resetCache();
-}
+	std::random_device	mRandomDevice;
+	std::mt19937		mMt19937;
+	std::uniform_int_distribution<int> mUniformDistribution;
+};
 
 void SystemView::populate()
 {
-	TextureLoader::paused = true;
-
 	clearEntries();
 
 	for(auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
@@ -170,16 +186,15 @@ void SystemView::populate()
 
 			// make logo
 			const ThemeData::ThemeElement* logoElem = theme->getElement("system", "logo", "image");
-			if(logoElem && logoElem->has("path") && theme->getSystemThemeFolder() != "default")
+			if(logoElem && logoElem->has("path"))
 			{
 				std::string path = logoElem->get<std::string>("path");
-				if (path.empty())
-					path = logoElem->has("default") ? logoElem->get<std::string>("default") : "";
-				
-				if (!path.empty())
+				std::string defaultPath = logoElem->has("default") ? logoElem->get<std::string>("default") : "";
+				if((!path.empty() && ResourceManager::getInstance()->fileExists(path))
+				   || (!defaultPath.empty() && ResourceManager::getInstance()->fileExists(defaultPath)))
 				{
 					// Remove dynamic flags for png & jpg files : themes can contain oversized images that can't be unloaded by the TextureResource manager
-					auto logo = std::make_shared<ImageComponent>(mWindow, false, false); // Utils::String::toLower(Utils::FileSystem::getExtension(path)) != ".svg");
+					ImageComponent* logo = new ImageComponent(mWindow, false, Utils::String::toLower(Utils::FileSystem::getExtension(path)) != ".svg");
 					logo->setMaxSize(mCarousel.logoSize * mCarousel.logoScale);
 					logo->applyTheme(theme, "system", "logo", ThemeFlags::COLOR | ThemeFlags::ALIGNMENT | ThemeFlags::VISIBLE); //  ThemeFlags::PATH | 
 
@@ -187,9 +202,9 @@ void SystemView::populate()
 					auto elem = theme->getElement("system", "logo", "image");
 					if (elem && elem->has("path"))
 					{
-						auto logoPath = elem->get<std::string>("path");
-						if (!logoPath.empty())
-							logo->setImage(logoPath, (elem->has("tile") && elem->get<bool>("tile")), MaxSizeInfo(mCarousel.logoSize * mCarousel.logoScale), false);
+						auto path = elem->get<std::string>("path");
+						if (Utils::FileSystem::exists(path))
+							logo->setImage(path, (elem->has("tile") && elem->get<bool>("tile")), MaxSizeInfo(mCarousel.logoSize * mCarousel.logoScale));
 					}
 
 					// If logosize is defined for full width/height, don't rotate by target size
@@ -197,7 +212,7 @@ void SystemView::populate()
 					if (mCarousel.size.x() != mCarousel.logoSize.x() & mCarousel.size.y() != mCarousel.logoSize.y())
 						logo->setRotateByTargetSize(true);
 					
-					e.data.logo = logo;
+					e.data.logo = std::shared_ptr<GuiComponent>(logo);
 				}
 			}
 			if (!e.data.logo)
@@ -209,7 +224,6 @@ void SystemView::populate()
 					0x000000FF,
 					ALIGN_CENTER);
 								
-				text->setScaleOrigin(0.0f);
 				text->setSize(mCarousel.logoSize * mCarousel.logoScale);
 				text->applyTheme((*it)->getTheme(), "system", "logoText", ThemeFlags::FONT_PATH | ThemeFlags::FONT_SIZE | ThemeFlags::COLOR | ThemeFlags::FORCE_UPPERCASE | ThemeFlags::LINE_SPACING | ThemeFlags::TEXT);
 				e.data.logo = std::shared_ptr<GuiComponent>(text);
@@ -243,17 +257,49 @@ void SystemView::populate()
 
 			Vector2f denormalized = mCarousel.logoSize * e.data.logo->getOrigin();
 			e.data.logo->setPosition(denormalized.x(), denormalized.y(), 0.0);
-			
-			if (!e.data.logo->selectStoryboard("deactivate") && !e.data.logo->selectStoryboard())
-				e.data.logo->deselectStoryboard();
+			// delete any existing extras
+			for (auto extra : e.data.backgroundExtras)
+				delete extra;
+			e.data.backgroundExtras.clear();
 
-			loadExtras(*it, e);
+			// make background extras
+			e.data.backgroundExtras = ThemeData::makeExtras((*it)->getTheme(), "system", mWindow);
+
+			for (auto extra : e.data.backgroundExtras)
+			{
+				if (extra->isKindOf<VideoComponent>())
+				{
+					auto elem = (*it)->getTheme()->getElement("system", extra->getTag(), "video");
+					if (elem != nullptr && elem->has("path") && Utils::String::startsWith(elem->get<std::string>("path"), "{random"))
+						((VideoComponent*)extra)->setPlaylist(std::make_shared<SystemRandomPlaylist>(*it, SystemRandomPlaylist::VIDEO));
+				}
+				else if (extra->isKindOf<ImageComponent>())
+				{
+					auto elem = (*it)->getTheme()->getElement("system", extra->getTag(), "image");
+					if (elem != nullptr && elem->has("path") && Utils::String::startsWith(elem->get<std::string>("path"), "{random"))
+					{
+						std::string src = elem->get<std::string>("path");
+
+						SystemRandomPlaylist::PlaylistType type = SystemRandomPlaylist::IMAGE;
+
+						if (src == "{random:thumbnail}")
+							type = SystemRandomPlaylist::THUMBNAIL;
+						else if (src == "{random:marquee}")
+							type = SystemRandomPlaylist::MARQUEE;
+
+						((ImageComponent*)extra)->setPlaylist(std::make_shared<SystemRandomPlaylist>(*it, type));
+					}
+				}
+			}
+
+			// sort the extras by z-index
+			std::stable_sort(e.data.backgroundExtras.begin(), e.data.backgroundExtras.end(),  [](GuiComponent* a, GuiComponent* b) {
+				return b->getZIndex() > a->getZIndex();
+			});
+
 			this->add(e);
 		}
 	}
-
-	TextureLoader::paused = false;
-
 	if (mEntries.size() == 0)
 	{
 		// Something is wrong, there is not a single system to show, check if UI mode is not full
@@ -263,14 +309,15 @@ void SystemView::populate()
 			mWindow->pushGui(new GuiMsgBox(mWindow, "The selected UI mode has nothing to show,\n returning to UI mode: FULL", "OK", nullptr));
 		}
 
-		if (Settings::getInstance()->setString("HiddenSystems", ""))
-		{
-			Settings::getInstance()->saveFile();
+		//batocera - behavior when all systems are hidden (re-enable all)
+		LOG (LogError) << "Error: every system is hidden in batocera.conf, please put at least one system available like 'nes.hide=0'";
+		for (auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
+			SystemConf::getInstance()->set((*it)->getName()+".hide", "0");
 
-			// refresh GUI
-			populate();
-			mWindow->pushGui(new GuiMsgBox(mWindow, _("ERROR: EVERY SYSTEM IS HIDDEN, RE-DISPLAYING ALL OF THEM NOW"), _("OK"), nullptr));
-		}
+		SystemConf::getInstance()->saveSystemConf();
+		// refresh GUI
+		populate();
+		mWindow->pushGui(new GuiMsgBox(mWindow, "ERROR: EVERY SYSTEM IS HIDDEN, RE-DISPLAYING ALL OF THEM NOW", "OK", nullptr));
 	}
 }
 
@@ -282,123 +329,23 @@ void SystemView::goToSystem(SystemData* system, bool animate)
 		finishAnimation(0);
 }
 
-static void _moveCursorInRange(int& value, int count, int sz)
-{
-	if (count >= sz)
-		return;
-
-	value += count;
-	if (value < 0) value += sz;
-	if (value >= sz) value -= sz;	
-}
-
-int SystemView::moveCursorFast(bool forward)
-{
-	int cursor = mCursor;
-
-	if (SystemData::isManufacturerSupported() && Settings::getInstance()->getString("SortSystems") == "manufacturer" && mCursor >= 0 && mCursor < mEntries.size())
-	{
-		std::string man = mEntries[mCursor].object->getSystemMetadata().manufacturer;
-
-		int direction = forward ? 1 : -1;
-
-		_moveCursorInRange(cursor, direction, mEntries.size());
-
-		while (cursor != mCursor && mEntries[cursor].object->getSystemMetadata().manufacturer == man)
-			_moveCursorInRange(cursor, direction, mEntries.size());
-
-		if (!forward && cursor != mCursor)
-		{
-			// Find first item
-			man = mEntries[cursor].object->getSystemMetadata().manufacturer;
-			while (cursor != mCursor && mEntries[cursor].object->getSystemMetadata().manufacturer == man)
-				_moveCursorInRange(cursor, -1, mEntries.size());
-
-			_moveCursorInRange(cursor, 1, mEntries.size());
-		}
-	}
-	else if(SystemData::isManufacturerSupported() && Settings::getInstance()->getString("SortSystems") == "hardware" && mCursor >= 0 && mCursor < mEntries.size())
-	{
-		std::string hwt = mEntries[mCursor].object->getSystemMetadata().hardwareType;
-
-		int direction = forward ? 1 : -1;
-
-		_moveCursorInRange(cursor, direction, mEntries.size());
-
-		while (cursor != mCursor && mEntries[cursor].object->getSystemMetadata().hardwareType == hwt)
-			_moveCursorInRange(cursor, direction, mEntries.size());
-
-		if (!forward && cursor != mCursor)
-		{
-			// Find first item
-			hwt = mEntries[cursor].object->getSystemMetadata().hardwareType;
-			while (cursor != mCursor && mEntries[cursor].object->getSystemMetadata().hardwareType == hwt)
-				_moveCursorInRange(cursor, -1, mEntries.size());
-
-			_moveCursorInRange(cursor, 1, mEntries.size());
-		}
-	}
-	else
-		_moveCursorInRange(cursor, forward ? 10 : -10, mEntries.size());
-
-	return cursor;
-}
-
-void SystemView::showQuickSearch()
-{
-	SystemData* all = SystemData::getSystem("all");
-	if (all != nullptr)
-	{
-		auto updateVal = [this, all](const std::string& newVal)
-		{
-			auto index = all->getIndex(true);
-
-			index->resetFilters();
-			index->setTextFilter(newVal);
-
-			ViewController::get()->reloadGameListView(all);
-			ViewController::get()->goToGameList(all, false);
-		};
-
-		if (Settings::getInstance()->getBool("UseOSK"))
-			mWindow->pushGui(new GuiTextEditPopupKeyboard(mWindow, _("QUICK SEARCH"), "", updateVal, false));
-		else
-			mWindow->pushGui(new GuiTextEditPopup(mWindow, _("QUICK SEARCH"), "", updateVal, false));
-	}
-}
-
 bool SystemView::input(InputConfig* config, Input input)
 {
-	if (mYButton.isShortPressed(config, input))
-	{
-		bool netPlay = SystemData::isNetplayActivated() && SystemConf::getInstance()->getBool("global.netplay");
-		if (netPlay)
-			setCursor(SystemData::getRandomSystem());
-		else
-			showQuickSearch();
-
-		return true;
-	}
-
 	if(input.value != 0)
-	{	
-		bool netPlay = SystemData::isNetplayActivated() && SystemConf::getInstance()->getBool("global.netplay");
-		if (netPlay && config->isMappedTo("x", input))
-		{
-			if (ApiSystem::getInstance()->getIpAdress() == "NOT CONNECTED")
-				mWindow->pushGui(new GuiMsgBox(mWindow, _("YOU ARE NOT CONNECTED TO A NETWORK"), _("OK"), nullptr));
-			else 
-				mWindow->pushGui(new GuiNetPlay(mWindow));
+	{
+		bool kodi = false;
+		bool netPlay = SystemData::isNetplayActivated() && SystemConf::getInstance()->get("global.netplay") == "1";
 
+#ifdef _ENABLE_KODI_
+		kodi = SystemConf::getInstance()->get("kodi.enabled") != "0" && SystemConf::getInstance()->get("kodi.xbutton") == "1" && !UIModeController::getInstance()->isUIModeKid();
+#endif
+		
+		if (netPlay && config->isMappedTo(kodi ? "y" : "x", input))
+		{
+			mWindow->pushGui(new GuiNetPlay(mWindow));
 			return true;
 		}
-		/*
-		if (config->isMappedTo("y", input))
-		{	
-			showQuickSearch();
-			return true;
-		}
-		*/
+
 		if(config->getDeviceId() == DEVICE_KEYBOARD && input.value && input.id == SDLK_r && SDL_GetModState() & KMOD_LCTRL && Settings::getInstance()->getBool("Debug"))
 		{
 			LOG(LogInfo) << " Reloading all";
@@ -416,31 +363,61 @@ bool SystemView::input(InputConfig* config, Input input)
 		    }
 		}
 #endif
-
+// batocera
+#ifdef _ENABLE_KODI_
+            if(config->isMappedTo("x", input) && input.value && !launchKodi && SystemConf::getInstance()->get("kodi.enabled") != "0" && SystemConf::getInstance()->get("kodi.xbutton") == "1" && !UIModeController::getInstance()->isUIModeKid()) {
+                Window * window = mWindow;
+                mWindow->pushGui(new GuiMsgBox(window, _("DO YOU WANT TO START KODI MEDIA CENTER ?"), _("YES"),
+			       [window,this] { 
+                                    if( ! ApiSystem::getInstance()->launchKodi(window)) {
+                                        LOG(LogWarning) << "Shutdown terminated with non-zero result!";
+                                    }
+                                    this->launchKodi = false;
+					       }, _("NO"), [window,this] {
+                                    this->launchKodi = false;
+                                }));
+		return true;
+            }
+#endif
 		switch (mCarousel.type)
 		{
 		case VERTICAL:
 		case VERTICAL_WHEEL:
-			if (config->isMappedLike("up", input) || config->isMappedLike("l2", input))
+			if (config->isMappedLike("up", input))
 			{
 				listInput(-1);
 				return true;
 			}
-			if (config->isMappedLike("down", input) || config->isMappedLike("r2", input))
+			if (config->isMappedLike("down", input))
 			{
 				listInput(1);
 				return true;
 			}
 			if (config->isMappedTo("pagedown", input))
 			{
-				int cursor = moveCursorFast(true);
-				listInput(cursor - mCursor);				
+				int cursor = mCursor + 10;
+				if (cursor < 0)
+					cursor += (int)mEntries.size();
+
+				if (cursor >= (int)mEntries.size())
+					cursor -= (int)mEntries.size();
+
+				auto sd = mEntries.at(cursor).object;
+				ViewController::get()->goToSystemView(sd, true);
+				//listInput(10);
 				return true;
 			}
 			if (config->isMappedTo("pageup", input))
 			{
-				int cursor = moveCursorFast(false);
-				listInput(cursor - mCursor);
+				int cursor = mCursor - 10;
+				if (cursor < 0)
+					cursor += (int)mEntries.size();
+				if (cursor >= (int)mEntries.size())
+					cursor -= (int)mEntries.size();
+
+				auto sd = mEntries.at(cursor).object;
+				ViewController::get()->goToSystemView(sd, true);
+				//listInput(-10);
 				return true;
 			}
 
@@ -448,26 +425,41 @@ bool SystemView::input(InputConfig* config, Input input)
 		case HORIZONTAL:
 		case HORIZONTAL_WHEEL:
 		default:
-			if (config->isMappedLike("left", input) || config->isMappedLike("l2", input))
+			if (config->isMappedLike("left", input))
 			{
 				listInput(-1);
 				return true;
 			}
-			if (config->isMappedLike("right", input) || config->isMappedLike("r2", input))
+			if (config->isMappedLike("right", input))
 			{
 				listInput(1);
 				return true;
 			}
-			if (config->isMappedTo("pagedown", input))
+			if (config->isMappedTo("pagedown", input) && mEntries.size() > 10)
 			{
-				int cursor = moveCursorFast(true);
-				listInput(cursor - mCursor);
+				int cursor = mCursor + 10;
+				if (cursor < 0)
+					cursor += (int)mEntries.size();
+
+				if (cursor >= (int)mEntries.size())
+					cursor -= (int)mEntries.size();
+
+				auto sd = mEntries.at(cursor).object;
+				ViewController::get()->goToSystemView(sd, true);
+				//listInput(10);
 				return true;
 			}
-			if (config->isMappedTo("pageup", input))
+			if (config->isMappedTo("pageup", input) && mEntries.size() > 10)
 			{
-				int cursor = moveCursorFast(false);
-				listInput(cursor - mCursor);
+				int cursor = mCursor - 10;
+				if (cursor < 0)
+					cursor += (int)mEntries.size();
+				if (cursor >= (int)mEntries.size())
+					cursor -= (int)mEntries.size();
+
+				auto sd = mEntries.at(cursor).object;
+				ViewController::get()->goToSystemView(sd, true);
+				//listInput(-10);
 				return true;
 			}
 
@@ -480,32 +472,6 @@ bool SystemView::input(InputConfig* config, Input input)
 			ViewController::get()->goToGameList(getSelected());
 			return true;
 		}
-
-		if (config->isMappedTo(BUTTON_BACK, input) && SystemData::isManufacturerSupported())
-		{
-			auto sortMode = Settings::getInstance()->getString("SortSystems");
-			if (sortMode == "alpha")
-			{
-				showNavigationBar(_("GO TO LETTER"), [](SystemData* meta) { if (meta->isCollection()) return _("COLLECTIONS"); return Utils::String::toUpper(meta->getSystemMetadata().fullName.substr(0, 1)); });
-				return true;
-			}
-			else if (sortMode == "manufacturer")
-			{
-				showNavigationBar(_("GO TO MANUFACTURER"), [](SystemData* meta) { return meta->getSystemMetadata().manufacturer; });
-				return true;
-			}
-			else if (sortMode == "hardware")
-			{
-				showNavigationBar(_("GO TO HARDWARE"), [](SystemData* meta) { return meta->getSystemMetadata().hardwareType; });
-				return true;
-			}
-			else if (sortMode == "releaseDate")
-			{
-				showNavigationBar(_("GO TO DECADE"), [](SystemData* meta) { if (meta->getSystemMetadata().releaseYear == 0) return _("Unknown"); return std::to_string((meta->getSystemMetadata().releaseYear / 10) * 10) + "'s"; });
-				return true;
-			}
-		}
-		
 		if (config->isMappedTo("x", input))
 		{
 			// get random system
@@ -513,13 +479,14 @@ bool SystemView::input(InputConfig* config, Input input)
 			setCursor(SystemData::getRandomSystem());
 			return true;
 		}
-		
+#ifndef WIN32
 		// batocera
 		if(config->isMappedTo("select", input))
 		{
 			GuiMenu::openQuitMenu_batocera_static(mWindow, true);        
 			return true;
 		}
+#endif
 
 	}else{
 		if(config->isMappedLike("left", input) ||
@@ -527,11 +494,9 @@ bool SystemView::input(InputConfig* config, Input input)
 			config->isMappedLike("up", input) ||
 			config->isMappedLike("down", input) ||
 			config->isMappedLike("pagedown", input) ||
-			config->isMappedLike("pageup", input) ||
-			config->isMappedLike("l2", input) ||
-			config->isMappedLike("r2", input))
+			config->isMappedLike("pageup", input))
 			listInput(0);
-		/*
+
 #ifdef WIN32
 		// batocera
 		if(!UIModeController::getInstance()->isUIModeKid() && config->isMappedTo("select", input) && Settings::getInstance()->getBool("ScreenSaverControls"))
@@ -540,158 +505,17 @@ bool SystemView::input(InputConfig* config, Input input)
 			mWindow->renderScreenSaver();
 			return true;
 		}
-#endif*/
+#endif
 	}
 
 	return GuiComponent::input(config, input);
 }
 
-void SystemView::showNavigationBar(const std::string& title, const std::function<std::string(SystemData* system)>& selector)
-{
-	stopScrolling();
-	
-	GuiSettings* gs = new GuiSettings(mWindow, title, "-----"); // , "", nullptr, true);
-
-	int idx = 0;
-	std::string sel = selector(getSelected());
-
-	std::string man = "*-*";
-	for (int i = 0; i < SystemData::sSystemVector.size(); i++)
-	{
-		auto system = SystemData::sSystemVector[i];
-		if (!system->isVisible())
-			continue;
-		
-		auto mf = selector(system);
-		if (man != mf)
-		{
-			std::vector<std::string> names;
-			for (auto sy : SystemData::sSystemVector)
-				if (sy->isVisible() && selector(sy) == mf)
-					names.push_back(sy->getFullName());
-
-			gs->getMenu().addWithDescription(mf, Utils::String::join(names, ", "), nullptr, [this, gs, system, idx]
-			{
-				listInput(idx - mCursor);
-				listInput(0);
-
-				auto pthis = this;
-
-				delete gs;
-
-				pthis->mLastCursor = -1;
-				pthis->onCursorChanged(CURSOR_STOPPED);
-
-			}, "", sel == mf);
-
-			man = mf;
-		}
-
-		idx++;
-	}
-	
-	float w = Math::min(Renderer::getScreenWidth() * 0.5, ThemeData::getMenuTheme()->Text.font->sizeText("S").x() * 31.0f);
-	w = Math::max(w, Renderer::getScreenWidth() / 3.0f);
-
-	gs->getMenu().setSize(w, Renderer::getScreenHeight());
-
-	gs->getMenu().animateTo(
-		Vector2f(-w, 0),
-		Vector2f(0, 0), AnimateFlags::OPACITY | AnimateFlags::POSITION);
-
-	mWindow->pushGui(gs);
-}
-
 void SystemView::update(int deltaTime)
 {
-	for(auto sb : mStaticBackgrounds)
-		sb->update(deltaTime);
-
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->update(deltaTime);
-	
 	listUpdate(deltaTime);
-	mSystemInfo.update(deltaTime);
-
-	for (auto it = mEntries.cbegin(); it != mEntries.cend(); it++)
-	{
-		if (it->data.logo)
-			it->data.logo->update(deltaTime);
-
-		for (auto xt : it->data.backgroundExtras)
-			xt->update(deltaTime);
-	}
-	
+	updateExtras([this, deltaTime](GuiComponent* p) { p->update(deltaTime); });
 	GuiComponent::update(deltaTime);
-
-	if (mYButton.isLongPressed(deltaTime))
-		showQuickSearch();
-}
-
-void SystemView::updateExtraTextBinding()
-{
-	if (mCursor < 0 || mCursor >= mEntries.size())
-		return;
-
-	GameCountInfo* info = getSelected()->getGameCountInfo();
-
-	for (auto extra : mEntries[mCursor].data.backgroundExtras)
-	{
-		TextComponent* text = dynamic_cast<TextComponent*>(extra);
-		if (text == nullptr)
-			continue;
-
-		auto src = text->getOriginalThemeText();
-		if (src.find("{binding:") == std::string::npos)
-			continue;
-
-		if (info->totalGames != info->visibleGames)
-			src = Utils::String::replace(src, "{binding:total}", std::to_string(info->visibleGames) + " / " + std::to_string(info->totalGames));
-		else
-			src = Utils::String::replace(src, "{binding:total}", std::to_string(info->totalGames));
-
-		if (info->playCount == 0)
-			src = Utils::String::replace(src, "{binding:played}", _("None"));
-		else
-			src = Utils::String::replace(src, "{binding:played}", std::to_string(info->playCount));
-
-		if (info->favoriteCount == 0)
-			src = Utils::String::replace(src, "{binding:favorites}", _("None"));
-		else
-			src = Utils::String::replace(src, "{binding:favorites}", std::to_string(info->favoriteCount));
-
-		if (info->hiddenCount == 0)
-			src = Utils::String::replace(src, "{binding:hidden}", _("None"));
-		else
-			src = Utils::String::replace(src, "{binding:hidden}", std::to_string(info->hiddenCount));
-		
-		if (info->gamesPlayed == 0)
-			src = Utils::String::replace(src, "{binding:gamesPlayed}", _("None"));
-		else
-			src = Utils::String::replace(src, "{binding:gamesPlayed}", std::to_string(info->gamesPlayed));
-
-		if (info->mostPlayed.empty())
-			src = Utils::String::replace(src, "{binding:mostPlayed}", _("Unknown"));
-		else
-			src = Utils::String::replace(src, "{binding:mostPlayed}", info->mostPlayed);
-
-		Utils::Time::DateTime dt = info->lastPlayedDate;
-
-		if (dt.getTime() == 0)
-			src = Utils::String::replace(src, "{binding:lastPlayedDate}", _("Unknown"));
-		else
-		{
-			time_t     clockNow = dt.getTime();
-			struct tm  clockTstruct = *localtime(&clockNow);
-
-			char       clockBuf[256];
-			strftime(clockBuf, sizeof(clockBuf), "%Ex", &clockTstruct);
-
-			src = Utils::String::replace(src, "{binding:lastPlayedDate}", clockBuf);
-		}
-		
-		text->setText(src);
-	}
 }
 
 void SystemView::onCursorChanged(const CursorState& /*state*/)
@@ -727,7 +551,7 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 	std::string transition_style = Settings::getInstance()->getString("TransitionStyle");
 	if (transition_style == "auto")
 	{
-		if (mCarousel.defaultTransition == "instant" || mCarousel.defaultTransition == "fade" || mCarousel.defaultTransition == "slide" || mCarousel.defaultTransition == "fade & slide")
+		if (mCarousel.defaultTransition == "instant" || mCarousel.defaultTransition == "fade" || mCarousel.defaultTransition == "slide")
 			transition_style = mCarousel.defaultTransition;
 		else
 			transition_style = "slide";
@@ -744,50 +568,32 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 		mSystemInfo.setOpacity((unsigned char)(Math::lerp(infoStartOpacity, 0.f, t) * 255));
 	}, (int)(infoStartOpacity * (goFast ? 10 : 150)));
 
-	unsigned int gameCount = getSelected()->getGameCountInfo()->visibleGames;
-
-	updateExtraTextBinding();
+	unsigned int gameCount = getSelected()->getDisplayedGameCount();
 
 	// also change the text after we've fully faded out
-	setAnimation(infoFadeOut, 0, [this, gameCount] 
-	{
+	setAnimation(infoFadeOut, 0, [this, gameCount] {
+		std::stringstream ss;
+		char strbuf[256];
+ 
 		if (!getSelected()->isGameSystem() && !getSelected()->isGroupSystem())
-			mSystemInfo.setText(_("CONFIGURATION"));
-		else if (mCarousel.systemInfoCountOnly)
-			mSystemInfo.setText(std::to_string(gameCount));
-		else
+			ss << "CONFIGURATION";
+		else 
 		{
-			std::stringstream ss;
-			char strbuf[256];
-			
-			if (getSelected() == CollectionSystemManager::get()->getCustomCollectionsBundle())
-			{
-				int collectionCount = getSelected()->getRootFolder()->getChildren().size();
-				snprintf(strbuf, 256, ngettext("%i COLLECTION", "%i COLLECTIONS", collectionCount), collectionCount);
-			}
-			else if (getSelected()->hasPlatformId(PlatformIds::PLATFORM_IGNORE) && !getSelected()->isCollection())
-				snprintf(strbuf, 256, ngettext("%i ITEM", "%i ITEMS", gameCount), gameCount);
-			else
-				snprintf(strbuf, 256, ngettext("%i GAME", "%i GAMES", gameCount), gameCount);
+		  snprintf(strbuf, 256, ngettext("%i GAME AVAILABLE", "%i GAMES AVAILABLE", gameCount), gameCount);
+		  ss << strbuf;
+		}
 
-			ss << strbuf;
-			mSystemInfo.setText(ss.str());
-		}			
-		
-		mSystemInfo.onShow();
+		mSystemInfo.setText(ss.str());
 	}, false, 1);
 
-	if (!mSystemInfo.hasStoryBoard())
+	Animation* infoFadeIn = new LambdaAnimation(
+		[this](float t)
 	{
-		Animation* infoFadeIn = new LambdaAnimation(
-			[this](float t)
-		{
-			mSystemInfo.setOpacity((unsigned char)(Math::lerp(0.f, 1.f, t) * 255));
-		}, goFast ? 10 : 300);
+		mSystemInfo.setOpacity((unsigned char)(Math::lerp(0.f, 1.f, t) * 255));
+	}, goFast ? 10 : 300);
 
-		// wait 600ms to fade in
-		setAnimation(infoFadeIn, goFast ? 0 : systemInfoDelay, nullptr, false, 2);
-	}
+	// wait 600ms to fade in
+	setAnimation(infoFadeIn, goFast ? 0 : systemInfoDelay, nullptr, false, 2);
 
 	// no need to animate transition, we're not going anywhere (probably mEntries.size() == 1)
 	if(endPos == mCamOffset && endPos == mExtrasCamOffset)
@@ -802,83 +608,74 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 	int oldCursor = mLastCursor;
 	mLastCursor = mCursor;
 
-	// TODO
-
-	if (oldCursor >= 0 && oldCursor < mEntries.size())
-	{
-		auto logo = mEntries.at(oldCursor).data.logo;				
-		if (logo)
-		{
-			if (logo->selectStoryboard("deactivate"))
-				logo->startStoryboard();
-			else if (!logo->selectStoryboard())
-				logo->deselectStoryboard();
-		}
-	}
-
-	if (mCursor >= 0 && mCursor < mEntries.size())
-	{
-		auto logo = mEntries.at(mCursor).data.logo;
-		if (logo)
-		{
-			if (logo->selectStoryboard("activate"))
-				logo->startStoryboard();
-			else if (!logo->selectStoryboard())
-				logo->deselectStoryboard();
-		}
-	}
-
 	Animation* anim;
 	bool move_carousel = Settings::getInstance()->getBool("MoveCarousel");
-	if (Settings::getInstance()->getString("PowerSaverMode") == "instant")
-		move_carousel = false;
-
-	if (transition_style == "fade" || transition_style == "fade & slide")
+	if(transition_style == "fade")
 	{
-		anim = new LambdaAnimation([this, startPos, endPos, posMax, move_carousel, oldCursor, transition_style](float t)
+		float startExtrasFade = mExtrasFadeOpacity;
+		anim = new LambdaAnimation(
+			[this, startExtrasFade, startPos, endPos, posMax, move_carousel, oldCursor](float t)
 		{
 			mExtrasFadeOldCursor = oldCursor;
 
-			float f = Math::lerp(startPos, endPos, Math::easeOutQuint(t));
-
-			if (f < 0) f += posMax;
-			if (f >= posMax) f -= posMax;
+			t -= 1;
+			float f = Math::lerp(startPos, endPos, t*t*t + 1);
+			if(f < 0)
+				f += posMax;
+			if(f >= posMax)
+				f -= posMax;
 
 			this->mCamOffset = move_carousel ? f : endPos;
 
-			this->mExtrasFadeOpacity = Math::lerp(1, 0, Math::easeOutQuint(t));
+			t += 1;
+			/*
+			if(t < 0.3f)
+				this->mExtrasFadeOpacity = Math::lerp(0.0f, 1.0f, t / 0.3f + startExtrasFade);
+			else if(t < 0.7f)
+				this->mExtrasFadeOpacity = 1.0f;
+			else
+				this->mExtrasFadeOpacity = Math::lerp(1.0f, 0.0f, (t - 0.7f) / 0.3f);
+				*/
 
-			if (transition_style == "fade & slide")
-				this->mExtrasFadeMove = Math::lerp(1, 0, Math::easeOutCubic(t));
+			if (t < 0.3f)
+				this->mExtrasFadeOpacity = 1.0f;
+			else if (t >= 0.7f)
+				this->mExtrasFadeOpacity = 0.0f;
+			else
+				this->mExtrasFadeOpacity = Math::lerp(1.0f, 0.0f, (t - 0.3f) / 0.4f);
 
 			this->mExtrasCamOffset = endPos;
 
 		}, 500);
-	} 
-	else if (transition_style == "slide") 
-	{
-		anim = new LambdaAnimation([this, startPos, endPos, posMax, move_carousel](float t)
-		{			
-			float f = Math::lerp(startPos, endPos, Math::easeOutQuint(t));
-			if (f < 0) f += posMax;
-			if (f >= posMax) f -= posMax;
+	} else if (transition_style == "slide") {
+		// slide
+		anim = new LambdaAnimation(
+			[this, startPos, endPos, posMax, move_carousel](float t)
+		{
+			t -= 1;
+			float f = Math::lerp(startPos, endPos, t*t*t + 1);
+			if(f < 0)
+				f += posMax;
+			if(f >= posMax)
+				f -= posMax;
 
 			this->mCamOffset = move_carousel ? f : endPos;
 			this->mExtrasCamOffset = f;
-
 		}, 500);
-	} 
-	else // instant
-	{		
-		anim = new LambdaAnimation([this, startPos, endPos, posMax, move_carousel ](float t)
+	} else {
+		// instant
+		anim = new LambdaAnimation(
+			[this, startPos, endPos, posMax, move_carousel ](float t)
 		{
-			float f = Math::lerp(startPos, endPos, Math::easeOutQuint(t));
-			if (f < 0) f += posMax; 
-			if (f >= posMax) f -= posMax;
+			t -= 1;
+			float f = Math::lerp(startPos, endPos, t*t*t + 1);
+			if(f < 0)
+				f += posMax;
+			if(f >= posMax)
+				f -= posMax;
 
 			this->mCamOffset = move_carousel ? f : endPos;
 			this->mExtrasCamOffset = endPos;
-
 		}, move_carousel ? 500 : 1);
 	}
 
@@ -890,8 +687,6 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 
 	setAnimation(anim, 0, [this]
 	{
-		mExtrasFadeOpacity = 0.0f;
-		mExtrasFadeMove = 0.0f;
 		mExtrasFadeOldCursor = -1;
 
 		for (int i = 0; i < mEntries.size(); i++)
@@ -915,12 +710,13 @@ void SystemView::render(const Transform4x4f& parentTrans)
 	auto minMax = std::minmax(mCarousel.zIndex, systemInfoZIndex);
 
 	renderExtras(trans, INT16_MIN, minMax.first);
+	renderFade(trans);
 
-	for (auto sb : mStaticBackgrounds)
-		sb->render(trans);
+	if (mStaticBackground != nullptr)
+		mStaticBackground->render(trans);
 
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->render(trans);
+	if (mStaticVideoBackground != nullptr)
+		mStaticVideoBackground->render(trans);
 
 	if (mCarousel.zIndex > mSystemInfo.getZIndex()) {
 		renderInfoBar(trans);
@@ -944,25 +740,26 @@ std::vector<HelpPrompt> SystemView::getHelpPrompts()
 	std::vector<HelpPrompt> prompts;
 
 	if (mCarousel.type == VERTICAL || mCarousel.type == VERTICAL_WHEEL)
-		prompts.push_back(HelpPrompt("up/down", _("CHOOSE")));
+		prompts.push_back(HelpPrompt("up/down", _("CHOOSE"))); // batocera
 	else
-		prompts.push_back(HelpPrompt("left/right", _("CHOOSE")));
+		prompts.push_back(HelpPrompt("left/right", _("CHOOSE"))); // batocera
 
 	prompts.push_back(HelpPrompt(BUTTON_OK, _("SELECT")));
 
-	bool netPlay = SystemData::isNetplayActivated() && SystemConf::getInstance()->getBool("global.netplay");
+	bool kodi = false;
 
-	if (netPlay)
+#ifdef _ENABLE_KODI_
+	if (SystemConf::getInstance()->get("kodi.enabled") != "0" && SystemConf::getInstance()->get("kodi.xbutton") == "1" && !UIModeController::getInstance()->isUIModeKid()) 
 	{
-		prompts.push_back(HelpPrompt("x", _("NETPLAY")));
-		prompts.push_back(HelpPrompt("y", _("RANDOM") + std::string(" / ") + _("SEARCH"))); // QUICK 
-	}
+		kodi = true;
+		prompts.push_back(HelpPrompt("x", _("KODI"))); // batocera
+	}	
+#endif
+
+	if (SystemData::isNetplayActivated() && SystemConf::getInstance()->get("global.netplay") == "1")
+		prompts.push_back(HelpPrompt(kodi ? "y" : "x", _("NETPLAY")));
 	else
-	{
-		prompts.push_back(HelpPrompt("x", _("RANDOM")));	
-		if (SystemData::getSystem("all") != nullptr)
-			prompts.push_back(HelpPrompt("y", _("SEARCH"))); // QUICK 
-	}
+		prompts.push_back(HelpPrompt("x", _("RANDOM"))); // batocera
 
 	// batocera
 #ifdef _ENABLE_FILEMANAGER_
@@ -1008,32 +805,35 @@ void  SystemView::getViewElements(const std::shared_ptr<ThemeData>& theme)
 		mSystemInfo.applyTheme(theme, "system", "systemInfo", ThemeFlags::ALL);
 		mSystemInfo.setOpacity(0);
 	}
-		
-	for (auto sb : mStaticBackgrounds) delete sb;
-	mStaticBackgrounds.clear();
 
-	for (auto name : theme->getElementNames("system", "image"))
+	const ThemeData::ThemeElement* fixedBackgroundElem = theme->getElement("system", "staticBackground", "image");
+	if (fixedBackgroundElem)
 	{
-		if (Utils::String::startsWith(name, "staticBackground"))
-		{
-			ImageComponent* staticBackground = new ImageComponent(mWindow, false);
-			staticBackground->applyTheme(theme, "system", name, ThemeFlags::ALL);
-			mStaticBackgrounds.push_back(staticBackground);		
-		}
+		if (mStaticBackground == nullptr)
+			mStaticBackground = new ImageComponent(mWindow, false);
+
+		mStaticBackground->applyTheme(theme, "system", "staticBackground", ThemeFlags::ALL);
+	}
+	else if (mStaticBackground != nullptr)
+	{
+		delete mStaticBackground;
+		mStaticBackground = nullptr;
 	}
 
-	for (auto sb : mStaticVideoBackgrounds) delete sb;
-	mStaticVideoBackgrounds.clear();
+	const ThemeData::ThemeElement* fixedVideoBackgroundElem = theme->getElement("system", "staticBackgroundVideo", "video");
+	if (fixedVideoBackgroundElem && (!fixedVideoBackgroundElem->has("visible") || fixedVideoBackgroundElem->get<bool>("visible")))
+	{		
+		if (mStaticVideoBackground == nullptr)
+			mStaticVideoBackground = new VideoVlcComponent(mWindow);
+
+		mStaticVideoBackground->applyTheme(theme, "system", "staticBackgroundVideo", ThemeFlags::ALL);
+	}
+	else if (mStaticBackground != nullptr)
+	{
+		delete mStaticVideoBackground;
+		mStaticVideoBackground = nullptr;
+	}
 	
-	for (auto name : theme->getElementNames("system", "video"))
-	{
-		if (Utils::String::startsWith(name, "staticBackground"))
-		{
-			VideoVlcComponent* sv = new VideoVlcComponent(mWindow);
-			sv->applyTheme(theme, "system", name, ThemeFlags::ALL);
-			mStaticVideoBackgrounds.push_back(sv);
-		}
-	}
 
 	mViewNeedsReload = false;
 }
@@ -1112,21 +912,22 @@ void SystemView::renderCarousel(const Transform4x4f& trans)
 	int logoCount = Math::min(mCarousel.maxLogoCount, (int)mEntries.size());
 
 	// Adding texture loading buffers depending on scrolling speed and status
-	int bufferIndex = Math::max(0, Math::min(2, getScrollingVelocity() + 1));
+	int bufferIndex = getScrollingVelocity() + 1;
 	int bufferLeft = logoBuffersLeft[bufferIndex];
 	int bufferRight = logoBuffersRight[bufferIndex];
-
 	if (logoCount == 1 && mCamOffset == 0)
 	{
 		bufferLeft = 0;
 		bufferRight = 0;
 	}
 
-	auto renderLogo = [this, carouselTrans, logoSpacing, xOff, yOff](int i)
+	for (int i = center - logoCount / 2 + bufferLeft; i <= center + logoCount / 2 + bufferRight; i++)
 	{
-		int index = i % (int)mEntries.size();
-		if (index < 0)
+		int index = i;
+		while (index < 0)
 			index += (int)mEntries.size();
+		while (index >= (int)mEntries.size())
+			index -= (int)mEntries.size();
 
 		Transform4x4f logoTrans = carouselTrans;
 		logoTrans.translate(Vector3f(i * logoSpacing[0] + xOff, i * logoSpacing[1] + yOff, 0));
@@ -1138,40 +939,17 @@ void SystemView::renderCarousel(const Transform4x4f& trans)
 		scale /= mCarousel.logoScale;
 
 		int opacity = (int)Math::round(0x80 + ((0xFF - 0x80) * (1.0f - fabs(distance))));
-		opacity = Math::max((int)0x80, opacity);
+		opacity = Math::max((int) 0x80, opacity);
 
 		const std::shared_ptr<GuiComponent> &comp = mEntries.at(index).data.logo;
 		if (mCarousel.type == VERTICAL_WHEEL || mCarousel.type == HORIZONTAL_WHEEL) {
 			comp->setRotationDegrees(mCarousel.logoRotation * distance);
 			comp->setRotationOrigin(mCarousel.logoRotationOrigin);
 		}
-		
-		if (!comp->hasStoryBoard())
-		{
-			comp->setScale(scale);
-			comp->setOpacity((unsigned char)opacity);
-		}
-		
+		comp->setScale(scale);
+		comp->setOpacity((unsigned char)opacity);
 		comp->render(logoTrans);
-	};
-
-
-	std::vector<int> activePositions;
-	for (int i = center - logoCount / 2 + bufferLeft; i <= center + logoCount / 2 + bufferRight; i++)
-	{
-		int index = i % (int)mEntries.size();
-		if (index < 0)
-			index += (int)mEntries.size();
-	
-		if (index == mCursor)
-			activePositions.push_back(i);
-		else
-			renderLogo(i);
 	}
-	
-	for (auto activePos : activePositions)
-		renderLogo(activePos);
-
 	Renderer::popClipRect();
 }
 
@@ -1183,69 +961,13 @@ void SystemView::renderInfoBar(const Transform4x4f& trans)
 
 #include <unordered_set>
 
-void SystemView::setExtraRequired(int cursor, bool required)
-{
-	auto setTexture = [](GuiComponent* extra, const std::function<void(std::shared_ptr<TextureResource>)>& func)
-	{
-		if (extra->isKindOf<ImageComponent>())
-		{
-			auto tex = ((ImageComponent*)extra)->getTexture();
-			if (tex != nullptr)
-				func(tex);
-		}
-	};
-
-	// Disable unloading for textures that will have to display 
-	for (GuiComponent* extra : mEntries.at(cursor).data.backgroundExtras)
-		setTexture(extra, [required](std::shared_ptr<TextureResource> x) { x->setRequired(required); });
-}
-
-void SystemView::preloadExtraNeighbours(int cursor)
-{
-	auto setTexture = [](GuiComponent* extra, const std::function<void(std::shared_ptr<TextureResource>)>& func)
-	{
-		if (extra->isKindOf<ImageComponent>())
-		{
-			auto tex = ((ImageComponent*)extra)->getTexture();
-			if (tex != nullptr)
-				func(tex);
-		}
-	};
-
-	// Make sure near textures are in at top position & will be released last if VRAM is required
-	int distancesStatic[] = { -2, 2, -1, 1, 0 };
-	int distancesRight[] = { 3, -1, 2, 1, 0 };
-	int distancesLeft[] = { -3, 1, -2, -1, 0 };
-
-	int* distances = &distancesStatic[0];
-	
-	if (getScrollingVelocity() > 0)
-		distances = &distancesRight[0];
-	else if (getScrollingVelocity() < 0)
-		distances = &distancesLeft[0];
-		
-	for (int dx = 0; dx < 5; dx++)
-	{
-		int i = cursor + distances[dx];
-		int index = i % (int)mEntries.size();
-		if (index < 0)
-			index += (int)mEntries.size();
-
-		for (GuiComponent* extra : mEntries.at(index).data.backgroundExtras)
-			if (dx > 1)
-				setTexture(extra, [](std::shared_ptr<TextureResource> x) { x->reload(); });
-			else
-				setTexture(extra, [](std::shared_ptr<TextureResource> x) { x->prioritize(); });
-	}
-}
-
 // Draw background extras
 void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upper)
 {
-	int min = (int)mExtrasCamOffset;
-	int max = (int)(mExtrasCamOffset + 0.99999f);
-
 	int extrasCenter = (int)mExtrasCamOffset;
+
+	// Adding texture loading buffers depending on scrolling speed and status
+	int bufferIndex = getScrollingVelocity() + 1;
 
 	Renderer::pushClipRect(Vector2i::Zero(), Vector2i((int)mSize.x(), (int)mSize.y()));
 	
@@ -1269,9 +991,7 @@ void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upp
 					continue;
 
 				std::string value = extra->getValue();
-				if (extra->isKindOf<VideoComponent>())
-					paths.insert(value);
-				else if (extra->isKindOf<ImageComponent>())
+				if (extra->isKindOf<ImageComponent>())
 					paths.insert(value);
 				else if (extra->isKindOf<TextComponent>())
 					values.insert(value);
@@ -1289,9 +1009,7 @@ void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upp
 					continue;
 
 				std::string value = extra->getValue();
-				if (extra->isKindOf<VideoComponent>())
-					paths.erase(value);
-				else if (extra->isKindOf<ImageComponent>())
+				if (extra->isKindOf<ImageComponent>())
 					paths.erase(value);
 				else if (extra->isKindOf<TextComponent>())
 					values.erase(value);
@@ -1310,47 +1028,33 @@ void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upp
 				continue;
 
 			std::string value = extra->getValue();
-			if (extra->isKindOf<ImageComponent>() || extra->isKindOf<VideoComponent>())
+			if (extra->isKindOf<ImageComponent>())
 			{
 				if (allPaths.find(value) == allPaths.cend())
-				{					
-					if (extra->getTag() == "background" || extra->getTag().find("bg-") == 0 || extra->getTag().find("bg_") == 0)
-						extra->render(trans);
-					else
-					{
-						auto opa = extra->getOpacity();
-						extra->setOpacity(mExtrasFadeOpacity * opa);
-						extra->render(trans);
-						extra->setOpacity(opa);
-					}
-				}
-				else if (extra->isKindOf<ImageComponent>() && ((ImageComponent*)extra)->isTiled() && extra->getPosition() == Vector3f::Zero() && extra->getSize() == Vector2f(Renderer::getScreenWidth(), Renderer::getScreenHeight()))					
+					extra->render(trans);
+				else if (((ImageComponent*)extra)->isTiled() && extra->getPosition() == Vector3f::Zero() && extra->getSize() == Vector2f(Renderer::getScreenWidth(), Renderer::getScreenHeight()))
 					extra->render(trans);
 			}
 			else if (extra->isKindOf<TextComponent>() && allValues.find(value) == allValues.cend())
-			{
-				auto opa = extra->getOpacity();
-				extra->setOpacity(mExtrasFadeOpacity * opa);
 				extra->render(trans);
-				extra->setOpacity(opa);
-				//extra->render(trans);
-			}				
 		}
 
 		Renderer::popClipRect();
 	}
 
-	for (int i = min ; i <= max; i++)
+	for (int i = extrasCenter + logoBuffersLeft[bufferIndex]; i <= extrasCenter + logoBuffersRight[bufferIndex]; i++)
 	{
-		int index = i % (int)mEntries.size();
-		if (index < 0)
+		int index = i;
+		while (index < 0)
 			index += (int)mEntries.size();
+		while (index >= (int)mEntries.size())
+			index -= (int)mEntries.size();
 
 		if (mExtrasFadeOpacity && (index == mExtrasFadeOldCursor || index != mCursor))
 			continue;
 
 		//Only render selected system when not showing
-		if (!isShowing() && index != mCursor)
+		if (!mShowing && index != mCursor)
 			continue;
 
 		Entry& entry = mEntries.at(index);
@@ -1385,47 +1089,22 @@ void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upp
 		{
 			if (extra->getZIndex() < lower || extra->getZIndex() >= upper)
 				continue;
-
+								
 			// ExtrasFadeOpacity : Apply opacity only on elements that are not common with the original view
 			if (mExtrasFadeOpacity && !extra->isStaticExtra())
-			{			
-				auto xt = extrasTrans;
-
-				// Fade Animation
-				if (mExtrasFadeMove)
-				{
-					float mvs = 48.0f;
-
-					if (mCarousel.type == HORIZONTAL || mCarousel.type == HORIZONTAL_WHEEL)
-					{
-						if ((mExtrasFadeOldCursor < mCursor && !(mExtrasFadeOldCursor == 0 && mCursor == mEntries.size() - 1)) ||
-							(mCursor == 0 && mExtrasFadeOldCursor == mEntries.size() - 1))
-							xt.translate(Vector3f((mExtrasFadeMove / mvs) * mSize.x(), 0, 0));
-						else
-							xt.translate(Vector3f(-(mExtrasFadeMove / mvs) * mSize.x(), 0, 0));
-					}
-					else
-					{
-						if ((mExtrasFadeOldCursor < mCursor && !(mExtrasFadeOldCursor == 0 && mCursor == mEntries.size() - 1)) ||
-							(mCursor == 0 && mExtrasFadeOldCursor == mEntries.size() - 1))
-							xt.translate(Vector3f(0, (mExtrasFadeMove / mvs) * mSize.y(), 0));
-						else
-							xt.translate(Vector3f(0, -(mExtrasFadeMove / mvs) * mSize.y(), 0));
-					}
-				}
-
+			{
 				std::string value = extra->getValue();
-				if (extra->isKindOf<ImageComponent>() || extra->isKindOf<VideoComponent>())
+				if (extra->isKindOf<ImageComponent>())
 				{
 					if (paths.find(value) != paths.cend())
 					{							
 						auto opa = extra->getOpacity();
-						extra->setOpacity((1.0f - mExtrasFadeOpacity) * opa);						
-						extra->render(extra->isStaticExtra() ? trans : xt);
+						extra->setOpacity((1.0f - mExtrasFadeOpacity) * opa);
+						extra->render(extra->isStaticExtra() ? trans : extrasTrans);
 						extra->setOpacity(opa);
 						continue;
 					}								
-					else if (extra->isKindOf<ImageComponent>() && ((ImageComponent*)extra)->isTiled() && extra->getPosition() == Vector3f::Zero() && extra->getSize() == Vector2f(Renderer::getScreenWidth(), Renderer::getScreenHeight()))
+					else if (((ImageComponent*)extra)->isTiled() && extra->getPosition() == Vector3f::Zero() && extra->getSize() == Vector2f(Renderer::getScreenWidth(), Renderer::getScreenHeight()))
 					{
 						auto opa = extra->getOpacity();
 						extra->setOpacity((1.0f - mExtrasFadeOpacity) * opa);
@@ -1486,6 +1165,17 @@ void SystemView::renderExtras(const Transform4x4f& trans, float lower, float upp
 	Renderer::popClipRect();
 }
 
+void SystemView::renderFade(const Transform4x4f& trans)
+{
+	// fade extras if necessary
+	if (mExtrasFadeOpacity)
+	{
+		unsigned int fadeColor = 0x00000000 | (unsigned char)(mExtrasFadeOpacity * 255);
+		Renderer::setMatrix(trans);
+		//Renderer::drawRect(0.0f, 0.0f, mSize.x(), mSize.y(), fadeColor, fadeColor);
+	}
+}
+
 // Populate the system carousel with the legacy values
 void  SystemView::getDefaultElements(void)
 {
@@ -1511,7 +1201,6 @@ void  SystemView::getDefaultElements(void)
 	mCarousel.maxLogoCount = 3;
 	mCarousel.zIndex = 40;
 	mCarousel.systemInfoDelay = 2000;
-	mCarousel.systemInfoCountOnly = false;
 	mCarousel.scrollSound = "";
 	mCarousel.defaultTransition = "";
 
@@ -1525,11 +1214,17 @@ void  SystemView::getDefaultElements(void)
 	mSystemInfo.setZIndex(50);
 	mSystemInfo.setDefaultZIndex(50);
 
-	for (auto sb : mStaticBackgrounds) delete sb;
-	mStaticBackgrounds.clear();
+	if (mStaticBackground != nullptr)
+	{
+		delete mStaticBackground;
+		mStaticBackground = nullptr;
+	}
 
-	for (auto sb : mStaticVideoBackgrounds) delete sb;
-	mStaticVideoBackgrounds.clear();
+	if (mStaticVideoBackground != nullptr)
+	{
+		delete mStaticVideoBackground;
+		mStaticVideoBackground = nullptr;
+	}
 }
 
 void SystemView::getCarouselFromTheme(const ThemeData::ThemeElement* elem)
@@ -1591,9 +1286,6 @@ void SystemView::getCarouselFromTheme(const ThemeData::ThemeElement* elem)
 	if (elem->has("systemInfoDelay"))
 		mCarousel.systemInfoDelay = elem->get<float>("systemInfoDelay");
 
-	if (elem->has("systemInfoCountOnly"))
-		mCarousel.systemInfoCountOnly = elem->get<bool>("systemInfoCountOnly");
-
 	if (elem->has("scrollSound"))
 		mCarousel.scrollSound = elem->get<std::string>("scrollSound");
 
@@ -1603,39 +1295,22 @@ void SystemView::getCarouselFromTheme(const ThemeData::ThemeElement* elem)
 
 void SystemView::onShow()
 {
-	GuiComponent::onShow();		
-
-	if (mCursor >= 0 && mCursor < mEntries.size())
-	{
-		auto logo = mEntries.at(mCursor).data.logo;
-		if (logo)
-		{
-			if (logo->selectStoryboard("activate"))
-				logo->startStoryboard();
-			else if (!logo->selectStoryboard())
-				logo->deselectStoryboard();
-		}
-	}
-
+	GuiComponent::onShow();	
+	mShowing = true;
 	activateExtras(mCursor);
 
-	for (auto sb : mStaticBackgrounds)
-		sb->onShow();
-
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->onShow();
+	if (mStaticVideoBackground)
+		mStaticVideoBackground->onShow();
 }
 
 void SystemView::onHide()
 {
-	GuiComponent::onHide();	
+	GuiComponent::onHide();
+	mShowing = false;
 	updateExtras([this](GuiComponent* p) { p->onHide(); });
 
-	for (auto sb : mStaticBackgrounds)
-		sb->onHide();
-
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->onHide();
+	if (mStaticVideoBackground)
+		mStaticVideoBackground->onHide();
 }
 
 void SystemView::onScreenSaverActivate()
@@ -1643,8 +1318,8 @@ void SystemView::onScreenSaverActivate()
 	mScreensaverActive = true;
 	updateExtras([this](GuiComponent* p) { p->onScreenSaverActivate(); });
 
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->onScreenSaverActivate();
+	if (mStaticVideoBackground)
+		mStaticVideoBackground->onScreenSaverActivate();
 }
 
 void SystemView::onScreenSaverDeactivate()
@@ -1652,8 +1327,8 @@ void SystemView::onScreenSaverDeactivate()
 	mScreensaverActive = false;
 	updateExtras([this](GuiComponent* p) { p->onScreenSaverDeactivate(); });
 
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->onScreenSaverDeactivate();
+	if (mStaticVideoBackground)
+		mStaticVideoBackground->onScreenSaverDeactivate();
 }
 
 void SystemView::topWindow(bool isTop)
@@ -1661,15 +1336,21 @@ void SystemView::topWindow(bool isTop)
 	mDisable = !isTop;
 	updateExtras([this, isTop](GuiComponent* p) { p->topWindow(isTop); });
 
-	for (auto sb : mStaticVideoBackgrounds)
-		sb->topWindow(isTop);
+	if (mStaticVideoBackground)
+		mStaticVideoBackground->topWindow(isTop);
 }
 
 void SystemView::updateExtras(const std::function<void(GuiComponent*)>& func)
 {
-	for (auto it : mEntries)
-		for (auto xt : it.data.backgroundExtras)
-			func(xt);
+	for (int i = 0; i < mEntries.size(); i++)
+	{
+		SystemViewData data = mEntries.at(i).data;
+		for (unsigned int j = 0; j < data.backgroundExtras.size(); j++)
+		{
+			GuiComponent* extra = data.backgroundExtras[j];
+			func(extra);
+		}
+	}
 }
 
 void SystemView::activateExtras(int cursor, bool activate)
@@ -1677,29 +1358,15 @@ void SystemView::activateExtras(int cursor, bool activate)
 	if (cursor < 0 || cursor >= mEntries.size())
 		return;
 
-	bool show = activate && isShowing() && !mScreensaverActive && !mDisable;
+	bool show = activate && mShowing && !mScreensaverActive && !mDisable;
 
 	SystemViewData data = mEntries.at(cursor).data;
 	for (unsigned int j = 0; j < data.backgroundExtras.size(); j++)
 	{
 		GuiComponent *extra = data.backgroundExtras[j];
-
 		if (show && activate)
 			extra->onShow();
 		else
 			extra->onHide();
 	}
-
-	setExtraRequired(cursor, activate);
-
-	if (activate)
-		preloadExtraNeighbours(cursor);
-}
-
-SystemData* SystemView::getActiveSystem()
-{
-	if (mCursor < 0 || mCursor >= mEntries.size())
-		return nullptr;
-
-	return mEntries[mCursor].object;
 }

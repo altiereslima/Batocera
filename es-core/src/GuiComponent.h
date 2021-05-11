@@ -8,7 +8,6 @@
 #include "HelpStyle.h"
 #include "InputConfig.h"
 #include <functional>
-#include "ThemeData.h"
 #include <memory>
 
 class Animation;
@@ -17,7 +16,6 @@ class Font;
 class InputConfig;
 class ThemeData;
 class Window;
-class StoryboardAnimator;
 
 namespace AnimateFlags
 {
@@ -86,10 +84,7 @@ public:
 	inline void setRotationDegrees(float rotation) { setRotation((float)ES_DEG_TO_RAD(rotation)); }
 
 	float getScale() const;
-	virtual void setScale(float scale);
-
-	Vector2f getScaleOrigin() const;
-	void setScaleOrigin(const Vector2f& scaleOrigin);
+	void setScale(float scale);
 
     float getZIndex() const;
     void setZIndex(float zIndex);
@@ -169,21 +164,6 @@ public:
 	bool isStaticExtra() const { return mStaticExtra; }
 	void setIsStaticExtra(bool value) { mStaticExtra = value; }
 
-	virtual ThemeData::ThemeElement::Property getProperty(const std::string name);
-	virtual void setProperty(const std::string name, const ThemeData::ThemeElement::Property& value);
-
-	bool isShowing() { return mShowing; }
-
-	// Storyboards
-	bool hasStoryBoard(const std::string& name = "");
-	bool applyStoryboard(const ThemeData::ThemeElement* elem, const std::string name = "");
-	bool selectStoryboard(const std::string& name = "");
-	void deselectStoryboard();
-	void startStoryboard();
-	void pauseStoryboard();
-
-	bool isStoryBoardRunning(const std::string& name = "");
-
 protected:
 	void renderChildren(const Transform4x4f& transform) const;
 	void updateSelf(int deltaTime); // updates animations
@@ -199,16 +179,16 @@ protected:
 	Vector2f mOrigin;
 	Vector2f mRotationOrigin;
 	Vector2f mSize;
-	Vector2f mScaleOrigin;
 
 	float mRotation = 0.0;
 	float mScale = 1.0;
+
 	float mDefaultZIndex = 0;
 	float mZIndex = 0;
 
 	bool mIsProcessing;
 	bool mVisible;
-	bool mShowing;
+
 	bool mStaticExtra;
 
 public:
@@ -216,12 +196,7 @@ public:
 
 private:
 	Transform4x4f mTransform; //Don't access this directly! Use getTransform()!
-	
-	std::map<unsigned char, AnimationController*> mAnimationMap;
-	//AnimationController* mAnimationMap[MAX_ANIMATIONS];
-	
-	StoryboardAnimator* mStoryboardAnimator;
-	std::map<std::string, ThemeStoryboard*> mStoryBoards;
+	AnimationController* mAnimationMap[MAX_ANIMATIONS];
 
 	std::string mTag;
 };

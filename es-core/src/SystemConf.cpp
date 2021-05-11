@@ -3,54 +3,11 @@
 #include <fstream>
 #include "Log.h"
 #include "utils/StringUtil.h"
-#include "utils/FileSystemUtil.h"
-
-#include <set>
+#include  "utils/FileSystemUtil.h"
 #include <regex>
-#include <string>
-#include <iostream>
-#include <SDL_timer.h>
-
-
-#if WIN32 & !_DEBUG
-	// NOBATOCERACONF routes all SystemConf to es_settings for Windows Release version
-
-	#include "Settings.h"
-	#define NOBATOCERACONF
-
-	std::string mapSettingsName(const std::string name)
-	{
-		if (name == "system.language")
-			return "Language";
-
-		return name;
-	}
-#endif
 
 SystemConf *SystemConf::sInstance = NULL;
 
-static std::set<std::string> dontRemoveValue
-{
-	{ "audio.device" }
-};
-
-static std::map<std::string, std::string> defaults =
-{
-	{ "kodi.enabled", "1" },
-	{ "kodi.atstartup", "0" },
-	{ "audio.bgmusic", "1" },
-	{ "wifi.enabled", "0" },
-	{ "system.hostname", "BATOCERA" },
-	{ "global.retroachievements", "0" },
-	{ "global.retroachievements.hardcore", "0" },
-	{ "global.retroachievements.leaderboards", "0" },
-	{ "global.retroachievements.verbose", "0" },
-	{ "global.retroachievements.screenshot", "0" },
-	{ "global.retroachievements.username", "" },
-	{ "global.retroachievements.password", "" },
-	{ "global.netplay_public_announce", "1" },
-	{ "global.ai_service_enabled", "0" },
-};
 
 std::string systemConfFile = "/userdata/system/batocera.conf";
 std::string systemConfFileTmp = "/userdata/system/batocera.conf.tmp";
@@ -58,27 +15,26 @@ std::string systemConfFileTmp = "/userdata/system/batocera.conf.tmp";
 SystemConf::SystemConf() 
 {
 #if WIN32
-	systemConfFile = Utils::FileSystem::getEsConfigPath() + "/batocera.conf";
-	systemConfFileTmp = Utils::FileSystem::getEsConfigPath() + "/batocera.conf.tmp";
+	systemConfFile = Utils::FileSystem::getHomePath() + "/batocera.conf";
+	systemConfFileTmp = Utils::FileSystem::getHomePath() + "/batocera.conf.tmp";
 #endif
 
     loadSystemConf();
 }
 
-SystemConf *SystemConf::getInstance() 
-{
+SystemConf *SystemConf::getInstance() {
     if (sInstance == NULL)
         sInstance = new SystemConf();
 
     return sInstance;
 }
 
+#include <regex>
+#include <string>
+#include <iostream>
+
 bool SystemConf::loadSystemConf() 
 {
-#ifdef NOBATOCERACONF
-	return true;
-#endif
-
 	mWasChanged = false;
 
     std::string line;
@@ -104,12 +60,10 @@ bool SystemConf::loadSystemConf()
     return true;
 }
 
+#include <SDL_timer.h>
+
 bool SystemConf::saveSystemConf()
 {
-#ifdef NOBATOCERACONF
-	return Settings::getInstance()->saveFile();	
-#endif
-
 	if (!mWasChanged)
 		return false;
 
@@ -134,8 +88,6 @@ bool SystemConf::saveSystemConf()
 
 		filein.close();
 	}
-
-	static std::string removeID = "$^é(p$^mpv$êrpver$^vper$vper$^vper$vper$vper$^vperv^pervncvizn";
 
 	int lastTime = SDL_GetTicks();
 
@@ -163,16 +115,10 @@ bool SystemConf::saveSystemConf()
 			if (idx == 0 || (idx == 1 && (fc == ';' || fc == '#')))
 			{
 				std::string val = it.second;
-				if ((!val.empty() && val != "auto") || dontRemoveValue.find(it.first) != dontRemoveValue.cend())
-				{
-					auto defaultValue = defaults.find(key);
-					if (defaultValue != defaults.cend() && defaultValue->second == val)
-						currentLine = removeID;
-					else
-						currentLine = key + val;
-				}
-				else 
-					currentLine = removeID;
+				if (!val.empty() && val != "auto")
+					currentLine = key + val;
+				else
+					currentLine = "#" + key + it.second;
 
 				lineFound = true;
 			}
@@ -196,10 +142,8 @@ bool SystemConf::saveSystemConf()
 		LOG(LogError) << "Unable to open for saving :  " << systemConfFileTmp << "\n";
 		return false;
 	}
-	for (int i = 0; i < fileLines.size(); i++) 
-	{
-		if (fileLines[i] != removeID)
-			fileout << fileLines[i] << "\n";
+	for (int i = 0; i < fileLines.size(); i++) {
+		fileout << fileLines[i] << "\n";
 	}
 
 	fileout.close();
@@ -217,25 +161,22 @@ bool SystemConf::saveSystemConf()
 
 std::string SystemConf::get(const std::string &name) 
 {
-#ifdef NOBATOCERACONF
-	return Settings::getInstance()->getString(mapSettingsName(name));
-#endif
-	
     if (confMap.count(name))
         return confMap[name];
     
-	if (defaults.count(name))
-		return defaults[name];
-
     return "";
+}
+
+std::string SystemConf::get(const std::string &name, const std::string &defaut) 
+{
+    if (confMap.count(name))
+        return confMap[name];
+    
+    return defaut;
 }
 
 bool SystemConf::set(const std::string &name, const std::string &value) 
 {
-#ifdef NOBATOCERACONF
-	return Settings::getInstance()->setString(mapSettingsName(name), value == "auto" ? "" : value);
-#endif
-
 	if (confMap.count(name) == 0 || confMap[name] != value)
 	{
 		confMap[name] = value;
@@ -244,25 +185,4 @@ bool SystemConf::set(const std::string &name, const std::string &value)
 	}
 
 	return false;
-}
-
-bool SystemConf::getBool(const std::string &name, bool defaultValue)
-{
-#ifdef NOBATOCERACONF
-	return Settings::getInstance()->getBool(mapSettingsName(name));
-#endif
-
-	if (defaultValue)
-		return get(name) != "0";
-
-	return get(name) == "1";
-}
-
-bool SystemConf::setBool(const std::string &name, bool value)
-{
-#ifdef NOBATOCERACONF	
-	return Settings::getInstance()->setBool(mapSettingsName(name), value);
-#endif
-
-	return set(name, value  ? "1" : "0");
 }

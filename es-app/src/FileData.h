@@ -5,13 +5,10 @@
 #include "utils/FileSystemUtil.h"
 #include "MetaData.h"
 #include <unordered_map>
-#include "KeyboardMapping.h"
-#include "SystemData.h"
-#include "SaveState.h"
 
+class SystemData;
 class Window;
 struct SystemEnvironmentData;
-
 
 enum FileType
 {
@@ -33,7 +30,6 @@ enum NetPlayMode
 	DISABLED,
 	CLIENT,
 	SERVER,	
-	SPECTATOR
 };
 
 struct LaunchGameOptions
@@ -43,17 +39,12 @@ struct LaunchGameOptions
 	int netPlayMode;
 	std::string ip;
 	int port;
-
-	std::string core;
-	std::string netplayClientPassword;
-
-	SaveState	saveStateInfo;
 };
 
 class FolderData;
 
 // A tree node that holds information for a file.
-class FileData : public IKeyboardMapContainer
+class FileData
 {
 public:
 	FileData(FileType type, const std::string& path, SystemData* system);
@@ -69,7 +60,6 @@ public:
 	inline SystemData* getSystem() const { return mSystem; }
 
 	virtual const std::string getPath() const;
-	const std::string getBreadCrumbPath();
 
 	virtual SystemEnvironmentData* getSystemEnvData() const;
 
@@ -78,26 +68,18 @@ public:
 	virtual const std::string getMarqueePath();
 	virtual const std::string getImagePath();
 
-	virtual const std::string getCore(bool resolveDefault = true);
-	virtual const std::string getEmulator(bool resolveDefault = true);
-
-	virtual bool isNetplaySupported();
-
-	void setCore(const std::string value);
-	void setEmulator(const std::string value);
-
 	virtual const bool getHidden();
 	virtual const bool getFavorite();
 	virtual const bool getKidGame();
-	virtual const bool hasCheevos();
 
 	const std::string getConfigurationName();
 
-	inline bool isPlaceHolder() { return mType == PLACEHOLDER; };	
+	inline bool isPlaceHolder() { return mType == PLACEHOLDER; };
+
+	virtual inline void refreshMetadata() { return; };
 
 	virtual std::string getKey();
 	const bool isArcadeAsset();
-	const bool isVerticalArcadeGame();
 	inline std::string getFullPath() { return getPath(); };
 	inline std::string getFileName() { return Utils::FileSystem::getFileName(getPath()); };
 	virtual FileData* getSourceFileData();
@@ -109,7 +91,7 @@ public:
 	// As above, but also remove parenthesis
 	std::string getCleanName() const;
 
-	bool launchGame(Window* window, LaunchGameOptions options = LaunchGameOptions());
+	void launchGame(Window* window, LaunchGameOptions options = LaunchGameOptions());
 
 	static void resetSettings();
 	
@@ -118,30 +100,10 @@ public:
 
 	void setMetadata(MetaDataList value) { getMetadata() = value; } 
 	
-	std::string getMetadata(MetaDataId key) { return getMetadata().get(key); }
-	void setMetadata(MetaDataId key, const std::string& value) { return getMetadata().set(key, value); }
-
-	void detectLanguageAndRegion(bool overWrite);
-
-	void deleteGameFiles();
-
-	void checkCrc32(bool force = false);
-	void checkMd5(bool force = false);
-	void checkCheevosHash(bool force = false);
-
-	void importP2k(const std::string& p2k);
-	std::string convertP2kFile();
-	bool hasP2kFile();
-
-	bool hasKeyboardMapping();
-	KeyMappingFile getKeyboardMapping();
-	bool isFeatureSupported(EmulatorFeatures::Features feature);
-	bool isExtensionCompatible();
-
-	std::string getCurrentGameSetting(const std::string& settingName);
+	std::string getMetadata(const std::string& key) { return getMetadata().get(key); }
+	void setMetadata(const std::string& key, const std::string& value) { getMetadata().set(key, value); }
 
 private:
-	std::string getKeyboardMappingFilePath();
 	MetaDataList mMetadata;
 
 protected:	
@@ -156,7 +118,8 @@ class CollectionFileData : public FileData
 public:
 	CollectionFileData(FileData* file, SystemData* system);
 	~CollectionFileData();
-	const std::string getName();	
+	const std::string getName();
+	void refreshMetadata();
 	FileData* getSourceFileData();
 	std::string getKey();
 	virtual const std::string getPath() const;
@@ -169,19 +132,32 @@ public:
 
 private:
 	// needs to be updated when metadata changes
+	std::string mCollectionFileName;
 	FileData* mSourceFileData;
+
+	bool mDirty;
 };
 
 class FolderData : public FileData
 {
-	friend class FileData;
-	friend class SystemData;
-
 public:
-	FolderData(const std::string& startpath, SystemData* system, bool ownsChildrens = true);
-	~FolderData();
+	FolderData(const std::string& startpath, SystemData* system, bool ownsChildrens=true) : FileData(FOLDER, startpath, system)
+	{
+		mIsDisplayableAsVirtualFolder = false;
+		mOwnsChildrens = ownsChildrens;
+	}
 
-	inline bool isVirtualStorage() { return !mOwnsChildrens; }
+	~FolderData()
+	{
+		if (mOwnsChildrens)
+		{
+			for (int i = mChildren.size() - 1; i >= 0; i--)
+				delete mChildren.at(i);
+		}
+
+		mChildren.clear();
+	}
+
 	inline bool isVirtualFolderDisplay() { return mIsDisplayableAsVirtualFolder && !mOwnsChildrens; }
 	
 	void enableVirtualFolderDisplay(bool value) { mIsDisplayableAsVirtualFolder = value; };
@@ -191,7 +167,7 @@ public:
 
 	inline const std::vector<FileData*>& getChildren() const { return mChildren; }
 	const std::vector<FileData*> getChildrenListToDisplay();
-	std::vector<FileData*> getFilesRecursive(unsigned int typeMask, bool displayedOnly = false, SystemData* system = nullptr, bool includeVirtualStorage = true) const;
+	std::vector<FileData*> getFilesRecursive(unsigned int typeMask, bool displayedOnly = false, SystemData* system = nullptr) const;
 	std::vector<FileData*> getFlatGameList(bool displayedOnly, SystemData* system) const;
 
 	void addChild(FileData* file, bool assignParent = true); // Error if mType != FOLDER
@@ -200,10 +176,6 @@ public:
 	void createChildrenByFilenameMap(std::unordered_map<std::string, FileData*>& map);
 
 	FileData* findUniqueGameForFolder();
-
-	void clear();
-	void removeVirtualFolders();
-	void removeFromVirtualFolders(FileData* game);
 
 private:
 	std::vector<FileData*> mChildren;

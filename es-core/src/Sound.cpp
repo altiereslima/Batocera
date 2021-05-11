@@ -14,13 +14,8 @@ std::shared_ptr<Sound> Sound::get(const std::string& path)
 		return it->second;
 
 	std::shared_ptr<Sound> sound = std::shared_ptr<Sound>(new Sound(path));
-
-	if (AudioManager::isInitialized())
-	{
-		AudioManager::getInstance()->registerSound(sound);
-		sMap[path] = sound;
-	}
-
+	AudioManager::getInstance()->registerSound(sound);
+	sMap[path] = sound;
 	return sound;
 }
 

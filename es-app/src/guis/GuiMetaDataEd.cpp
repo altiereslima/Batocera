@@ -21,11 +21,9 @@
 #include "LocaleES.h"
 #include "guis/GuiTextEditPopupKeyboard.h"
 #include "Gamelist.h"
-#include "components/OptionListComponent.h"
-#include "ApiSystem.h"
 
 GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams scraperParams,
-	const std::string& /*header*/, std::function<void()> saveCallback, std::function<void()> deleteFunc, FileData* file) : GuiComponent(window),
+	const std::string& /*header*/, std::function<void()> saveCallback, std::function<void()> deleteFunc) : GuiComponent(window),
 	mScraperParams(scraperParams),
 
 	mBackground(window, ":/frame.png"),
@@ -57,11 +55,6 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 	mList = std::make_shared<ComponentList>(mWindow);
 	mGrid.setEntry(mList, Vector2i(0, 1), true, true);
 
-	SystemData* system = file->getSystem();
-
-	auto emul_choice = std::make_shared<OptionListComponent<std::string>>(mWindow, _("Emulator"), false);
-	auto core_choice = std::make_shared<OptionListComponent<std::string>>(mWindow, _("Core"), false);
-
 	// populate list
 	for(auto iter = mdd.cbegin(); iter != mdd.cend(); iter++)
 	{
@@ -71,94 +64,9 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		if(iter->isStatistic)
 			continue;
 
-		if (file->getType() != GAME && !iter->visibleForFolder)
-			continue;
-
 		// create ed and add it (and any related components) to mMenu
 		// ed's value will be set below
 		ComponentListRow row;
-
-		if (iter->key == "emulator")
-		{
-			if (ApiSystem::getInstance()->isScriptingSupported(ApiSystem::GAMESETTINGS))
-				continue;
-
-			std::string defaultEmul = system->getDefaultEmulator();
-			std::string currentEmul = file->getEmulator(false);
-
-			if (defaultEmul.length() == 0)
-				emul_choice->add(_("AUTO"), "", true);
-			else
-				emul_choice->add(_("AUTO") + " (" + defaultEmul + ")", "", currentEmul.length() == 0);
-
-			for (auto core : file->getSystem()->getEmulators())
-				emul_choice->add(core.name, core.name, core.name == currentEmul);
-
-			row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(_("Emulator")), theme->Text.font, theme->Text.color), true);
-			row.addElement(emul_choice, false);
-
-			mList->addRow(row);
-			emul_choice->setTag(iter->key);
-			mEditors.push_back(emul_choice);
-
-			emul_choice->setSelectedChangedCallback([this, system, core_choice, file](std::string emulatorName)
-			{
-				std::string currentCore = file->getCore(false);
-
-				std::string defaultCore = system->getDefaultCore(emulatorName);
-				if (emulatorName.length() == 0)
-					defaultCore = system->getDefaultCore(system->getDefaultEmulator());
-
-				core_choice->clear();
-				if (defaultCore.length() == 0)
-					core_choice->add(_("AUTO"), "", false);
-				else
-					core_choice->add(_("AUTO") + " (" + defaultCore + ")", "", false);
-
-				std::vector<std::string> cores = system->getCoreNames(emulatorName);
-
-				bool found = false;
-
-				for (auto it = cores.begin(); it != cores.end(); it++)
-				{
-					std::string core = *it;
-					core_choice->add(core, core, currentCore == core);
-					if (currentCore == core)
-						found = true;
-				}
-
-				if (!found)
-					core_choice->selectFirstItem();
-				else
-					core_choice->invalidate();
-			});
-
-			continue;
-		}
-
-		if (iter->key == "core")
-		{
-			if (ApiSystem::getInstance()->isScriptingSupported(ApiSystem::GAMESETTINGS))
-				continue;
-
-			core_choice->setTag(iter->key);
-
-			row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(_("Core")), theme->Text.font, theme->Text.color), true);
-			row.addElement(core_choice, false);
-
-			mList->addRow(row);
-			ed = core_choice;
-
-			mEditors.push_back(core_choice);
-
-			// force change event to load core list
-			emul_choice->invalidate();
-			continue;
-		}
-
-
-
-
 		auto lbl = std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(iter->displayName), theme->Text.font, theme->Text.color);
 		row.addElement(lbl, true); // label
 
@@ -210,7 +118,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		default:
 			{
 				// MD_STRING
-				ed = std::make_shared<TextComponent>(window, "", theme->Text.font, theme->Text.color, ALIGN_RIGHT);
+				ed = std::make_shared<TextComponent>(window, "", theme->TextSmall.font, theme->Text.color, ALIGN_RIGHT);
 				row.addElement(ed, true);
 
 				auto spacer = std::make_shared<GuiComponent>(mWindow);
@@ -241,7 +149,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		mList->addRow(row);
 
 		ed->setTag(iter->key);
-		ed->setValue(mMetaData->get(iter->key, false));
+		ed->setValue(mMetaData->get(iter->key));
 		mEditors.push_back(ed);
 	}
 
@@ -251,15 +159,14 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		buttons.push_back(std::make_shared<ButtonComponent>(mWindow, _("SCRAPE"), _("SCRAPE"), std::bind(&GuiMetaDataEd::fetch, this)));
 
 	buttons.push_back(std::make_shared<ButtonComponent>(mWindow, _("SAVE"), _("SAVE"), [&] { save(); delete this; }));
+	buttons.push_back(std::make_shared<ButtonComponent>(mWindow, _("CANCEL"), _("CANCEL"), [&] { delete this; }));
 
 	if(mDeleteFunc)
 	{
 		auto deleteFileAndSelf = [&] { mDeleteFunc(); delete this; };
-		auto deleteBtnFunc = [this, deleteFileAndSelf] { mWindow->pushGui(new GuiMsgBox(mWindow, _("ISTO EXCLUIR¡ O(S) ARQUIVO(S) DO JOGO!\nVOC  TEM CERTEZA?"), _("YES"), deleteFileAndSelf, _("NO"), nullptr)); };
+		auto deleteBtnFunc = [this, deleteFileAndSelf] { mWindow->pushGui(new GuiMsgBox(mWindow, _("ISTO EXCLUIR√Å O(S) ARQUIVO(S) DO JOGO!\nVOC√ä TEM CERTEZA?"), _("YES"), deleteFileAndSelf, _("NO"), nullptr)); };
 		buttons.push_back(std::make_shared<ButtonComponent>(mWindow, _("DELETE"), _("DELETE"), deleteBtnFunc));
 	}
-
-	buttons.push_back(std::make_shared<ButtonComponent>(mWindow, _("CANCEL"), _("CANCEL"), [&] { delete this; }));
 
 	mButtons = makeButtonGrid(mWindow, buttons);
 	mGrid.setEntry(mButtons, Vector2i(0, 2), true, false);
@@ -284,10 +191,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		setSize(Renderer::getScreenWidth(), Renderer::getScreenHeight());
 	else
 	{
-		float width = Renderer::getScreenWidth() * 0.72f; // (float)Math::min(Renderer::getScreenHeight(), (int)(Renderer::getScreenWidth() * 0.90f));
-		if (width < Renderer::getScreenHeight())
-			width = Renderer::getScreenHeight();
-
+		float width = (float)Math::min(Renderer::getScreenHeight(), (int)(Renderer::getScreenWidth() * 0.90f));
 		setSize(width, Renderer::getScreenHeight() * 0.82f);
 	}
 
@@ -330,24 +234,15 @@ void GuiMetaDataEd::save()
 	{
 		std::shared_ptr<GuiComponent> ed = mEditors.at(i);		
 
-		auto val = ed->getValue();
 		auto key = ed->getTag();
-		
 		if (isStatistic(key))
 			continue;
 
-		if (key == "core" || key == "emulator")
-		{
-			std::shared_ptr<OptionListComponent<std::string>> list = std::static_pointer_cast<OptionListComponent<std::string>>(ed);
-			val = list->getSelected();
-		}
-
-		mMetaData->set(key, val);
+		mMetaData->set(key, ed->getValue());
 	}
 
 	// enter game in index
 	mScraperParams.system->addToIndex(mScraperParams.game);
-	mScraperParams.game->importP2k(mScrappedPk2);
 
 	if(mSavedCallback)
 		mSavedCallback();
@@ -378,17 +273,8 @@ void GuiMetaDataEd::fetchDone(const ScraperSearchResult& result)
 		if (key == "favorite" || key == "hidden")
 			continue;
 
-		if (key == "rating" && result.mdl.getFloat(MetaDataId::Rating) < 0)
-			continue;
-		
-		// Don't override medias when scrap result has nothing
-		if ((key == "image" || key == "thumbnail" || key == "marquee" || key == "fanart" || key == "titleshot" || key == "manual" || key == "map" || key == "video") && result.mdl.get(key).empty())
-			continue;
-
 		mEditors.at(i)->setValue(result.mdl.get(key));
 	}
-
-	mScrappedPk2 = result.p2k;
 }
 
 void GuiMetaDataEd::close(bool closeAllWindows)
@@ -397,27 +283,8 @@ void GuiMetaDataEd::close(bool closeAllWindows)
 	bool dirty = false;
 	for(unsigned int i = 0; i < mEditors.size(); i++)
 	{
-		auto ed = mEditors.at(i);
-		auto key = ed->getTag();
-		auto value = ed->getValue();
-
-		if (key == "core" || key == "emulator")
-		{
-			std::shared_ptr<OptionListComponent<std::string>> list = std::static_pointer_cast<OptionListComponent<std::string>>(ed);
-			value = list->getSelected();
-		}
-
-		std::string mdv = mMetaData->get(key, false);
-
-		if (key == "rating")
-		{
-			mdv = std::to_string(atof(mdv.c_str()));
-			value = std::to_string(atof(value.c_str()));
-		}
-		else
-			mdv = Utils::String::replace(mdv, "not-a-date-time", "19700101T010000");
-		
-		if (mdv != value)
+		auto key = mEditors.at(i)->getTag();
+		if(mMetaData->get(key) != mEditors.at(i)->getValue())
 		{
 			dirty = true;
 			break;

@@ -4,7 +4,6 @@
 
 #include <list>
 #include <string>
-#include <vector>
 #include "utils/TimeUtil.h"
 
 namespace Utils
@@ -12,9 +11,9 @@ namespace Utils
 	namespace FileSystem
 	{
 		typedef std::list<std::string> stringList;
-		
-		stringList  getDirContent      (const std::string& _path, const bool _recursive = false, const bool includeHidden = false);
-		std::vector<std::string>  getPathList        (const std::string& _path);
+
+		stringList  getDirContent      (const std::string& _path, const bool _recursive = false);
+		stringList  getPathList        (const std::string& _path);
 		std::string getHomePath        ();
 		std::string getCWDPath         ();
 		std::string getExePath         ();
@@ -33,7 +32,6 @@ namespace Utils
 		std::string resolveSymlink     (const std::string& _path);
 		bool        removeFile         (const std::string& _path);
 		bool        createDirectory    (const std::string& _path);
-		bool        removeDirectory    (const std::string& _path);
 		bool        exists             (const std::string& _path);
 		bool        isAbsolute         (const std::string& _path);
 		bool        isRegularFile      (const std::string& _path);
@@ -61,30 +59,8 @@ namespace Utils
 		fileList	getDirectoryFiles(const std::string& _path);
 		std::string combine(const std::string& _path, const std::string& filename);
 		size_t		getFileSize(const std::string& _path);
-
 		Utils::Time::DateTime getFileCreationDate(const std::string& _path);
-		Utils::Time::DateTime getFileModificationDate(const std::string& _path);
-
 		std::string	readAllText(const std::string fileName);
-		void		writeAllText(const std::string fileName, const std::string text);
-		bool		copyFile(const std::string src, const std::string dst);
-		void		deleteDirectoryFiles(const std::string path, bool deleteDirectory = false);
-		bool		renameFile(const std::string src, const std::string dst, bool overWrite = true);
-
-		std::string megaBytesToString(unsigned long size);
-
-
-		std::string getTempPath();
-		std::string getPdfTempPath();
-
-#ifdef WIN32
-		void		splitCommand(std::string cmd, std::string* executable, std::string* parameters);
-#endif
-
-		std::string getFileCrc32(const std::string& filename);
-		std::string getFileMd5(const std::string& filename);
-
-		std::string changeExtension(const std::string& _path, const std::string& extension);
 
 		class FileSystemCacheActivator
 		{

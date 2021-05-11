@@ -36,9 +36,6 @@ public:
 
 	void setRenderNonFocusedBackground(bool value) { mRenderNonFocusedBackground = value; }
 
-	Vector4f getPadding() { return mPadding; }
-	void setPadding(const Vector4f padding);
-
 private:
 	std::shared_ptr<Font> mFont;
 	std::function<void()> mPressedFunc;
@@ -64,7 +61,6 @@ private:
 	unsigned int mColorFocused;
 
 	bool mRenderNonFocusedBackground;
-	Vector4f	mPadding;
 };
 
 #endif // ES_CORE_COMPONENTS_BUTTON_COMPONENT_H

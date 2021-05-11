@@ -4,7 +4,6 @@
 
 #include "math/Misc.h"
 #include <assert.h>
-#include <string>
 
 class Vector2f;
 class Vector3f;
@@ -50,8 +49,6 @@ public:
 	Vector4f&      operator*=(const float& _other)          { *this = *this * _other; return *this; }
 	Vector4f&      operator/=(const float& _other)          { *this = *this / _other; return *this; }
 
-	Vector4f&      operator*=(const Vector2f& _other);
-
 	      float&   operator[](const int _index)             { assert(_index < 4 && "index out of range"); return (&mX)[_index]; }
 	const float&   operator[](const int _index) const       { assert(_index < 4 && "index out of range"); return (&mX)[_index]; }
 
@@ -78,8 +75,6 @@ public:
 	static const Vector4f UnitY() { return { 0, 1, 0, 0 }; }
 	static const Vector4f UnitZ() { return { 0, 0, 1, 0 }; }
 	static const Vector4f UnitW() { return { 0, 0, 0, 1 }; }
-
-	static const Vector4f parseString(const std::string& _input);
 
 private:
 

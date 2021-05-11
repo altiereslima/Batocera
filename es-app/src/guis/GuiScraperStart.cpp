@@ -3,12 +3,12 @@
 #include "components/OptionListComponent.h"
 #include "components/SwitchComponent.h"
 #include "guis/GuiMsgBox.h"
+#include "guis/GuiScraperMulti.h"
 #include "views/ViewController.h"
 #include "FileData.h"
 #include "SystemData.h"
 #include "scrapers/ThreadedScraper.h"
 #include "LocaleES.h"
-#include "GuiLoading.h"
 
 GuiScraperStart::GuiScraperStart(Window* window) : GuiComponent(window),
   mMenu(window, _("SCRAPE NOW").c_str()) // batocera
@@ -17,19 +17,39 @@ GuiScraperStart::GuiScraperStart(Window* window) : GuiComponent(window),
 
 	addChild(&mMenu);
 
-	auto scraper = Scraper::getScraper();
-
 	// add filters (with first one selected)
 	mFilters = std::make_shared< OptionListComponent<GameFilterFunc> >(mWindow, _("SCRAPE THESE GAMES"), false); // batocera
-	mFilters->add(_("All Games"), [](SystemData*, FileData*) -> bool { return true; }, false);
-	mFilters->add(_("Only missing medias"), [this, scraper](SystemData*, FileData* g) -> bool
+	mFilters->add(_("All Games"), // batocera
+		[](SystemData*, FileData*) -> bool { return true; }, false);
+
+	mFilters->add(_("Only missing medias"), [this](SystemData*, FileData* g) -> bool 
 	{ 
 		mOverwriteMedias = false;
-		return scraper->hasMissingMedia(g);
+
+		if (Settings::getInstance()->getString("Scraper") == "ScreenScraper")
+		{
+			if (!Settings::getInstance()->getString("ScrapperImageSrc").empty() && !Utils::FileSystem::exists(g->getMetadata().get("image")))
+				return true;
+
+			if (!Settings::getInstance()->getString("ScrapperThumbSrc").empty() && !Utils::FileSystem::exists(g->getMetadata().get("thumbnail")))
+				return true;
+
+			if (!Settings::getInstance()->getString("ScrapperLogoSrc").empty() && !Utils::FileSystem::exists(g->getMetadata().get("marquee")))
+				return true;
+
+			if (Settings::getInstance()->getBool("ScrapeVideos") && !Utils::FileSystem::exists(g->getMetadata().get("video")))
+				return true;
+
+			return false;
+		}
+		else
+			return !Utils::FileSystem::exists(g->getMetadata().get("image"));
+
 	}, true);
 
 	mMenu.addWithLabel(_("FILTER"), mFilters); // batocera
-	
+
+
 	std::string currentSystem;
 
 	if (ViewController::get()->getState().viewing == ViewController::GAME_LIST)
@@ -38,28 +58,23 @@ GuiScraperStart::GuiScraperStart(Window* window) : GuiComponent(window),
 
 	//add systems (all with a platformidz specified selected)
 	mSystems = std::make_shared< OptionListComponent<SystemData*> >(mWindow, _("SCRAPE THESE SYSTEMS"), true); // batocera
-	for (auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
+	for(auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
 	{
 		if ((*it)->isGroupSystem())
 			continue;
 
-		if ((*it)->hasPlatformId(PlatformIds::PLATFORM_IGNORE))
-			continue;
-
-		if (!scraper->isSupportedPlatform(*it))
-			continue;
-
-		mSystems->add((*it)->getFullName(), *it,
-			currentSystem.empty() ?
-			!(*it)->getPlatformIds().empty() :
-			(*it)->getName() == currentSystem && !(*it)->getPlatformIds().empty());
+		if(!(*it)->hasPlatformId(PlatformIds::PLATFORM_IGNORE))
+			mSystems->add((*it)->getFullName(), *it, 
+				currentSystem.empty() ? 
+				!(*it)->getPlatformIds().empty() : 
+				(*it)->getName() == currentSystem && !(*it)->getPlatformIds().empty());
 	}
 
 	mMenu.addWithLabel(_("SYSTEMS"), mSystems); // batocera
 
-	// mApproveResults = std::make_shared<SwitchComponent>(mWindow);
-	// mApproveResults->setState(false);
-	// mMenu.addWithLabel(_("USER DECIDES ON CONFLICTS"), mApproveResults);
+	mApproveResults = std::make_shared<SwitchComponent>(mWindow);
+	mApproveResults->setState(false);
+	mMenu.addWithLabel(_("USER DECIDES ON CONFLICTS"), mApproveResults);
 
 	mMenu.addButton(_("START"), _("START"), std::bind(&GuiScraperStart::pressedStart, this));
 	mMenu.addButton(_("BACK"), _("BACK"), [&] { delete this; });
@@ -90,39 +105,42 @@ void GuiScraperStart::pressedStart()
 
 void GuiScraperStart::start()
 {
-	if (ThreadedScraper::isRunning())
+	std::queue<ScraperSearchParams> searches = getSearches(mSystems->getSelectedObjects(), mFilters->getSelected());
+
+	if(searches.empty())
 	{
-		Window* window = mWindow;
-
-		mWindow->pushGui(new GuiMsgBox(mWindow, _("SCRAPING IS RUNNING. DO YOU WANT TO STOP IT ?"), _("YES"), [this, window]
-		{
-			ThreadedScraper::stop();
-		}, _("NO"), nullptr));
-
-		return;
+		mWindow->pushGui(new GuiMsgBox(mWindow,
+					       _("NO GAMES FIT THAT CRITERIA."))); // batocera
 	}
+	else
+	{
+		if (ThreadedScraper::isRunning())
+		{
+			Window* window = mWindow;
 
-	mWindow->pushGui(new GuiLoading<std::queue<ScraperSearchParams>>(mWindow, _("PLEASE WAIT"),
-		[this]
+			mWindow->pushGui(new GuiMsgBox(mWindow, _("SCRAPING IS RUNNING. DO YOU WANT TO STOP IT ?"), _("YES"), [this, window]
+			{
+				ThreadedScraper::stop();
+			}, _("NO"), nullptr));
+
+			return;
+		}
+
+		if (mApproveResults->getState())
 		{
-			return getSearches(mSystems->getSelectedObjects(), mFilters->getSelected());
-		},
-		[this](std::queue<ScraperSearchParams> searches)
-		{
-			if (searches.empty())
-				mWindow->pushGui(new GuiMsgBox(mWindow, _("NO GAMES FIT THAT CRITERIA."))); // batocera
-			else
-			{			
-				ThreadedScraper::start(mWindow, searches);
-				delete this;
-			}
-		}));	
+			GuiScraperMulti* gsm = new GuiScraperMulti(mWindow, searches, mApproveResults->getState());
+			mWindow->pushGui(gsm);
+		}
+		else
+			ThreadedScraper::start(mWindow, searches);
+
+		delete this;
+	}
 }
 
 std::queue<ScraperSearchParams> GuiScraperStart::getSearches(std::vector<SystemData*> systems, GameFilterFunc selector)
 {
 	std::queue<ScraperSearchParams> queue;
-
 	for(auto sys = systems.cbegin(); sys != systems.cend(); sys++)
 	{
 		std::vector<FileData*> games = (*sys)->getRootFolder()->getFilesRecursive(GAME);

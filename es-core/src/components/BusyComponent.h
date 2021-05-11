@@ -13,19 +13,14 @@ class TextComponent;
 class BusyComponent : public GuiComponent
 {
 public:
-	BusyComponent(Window* window, const std::string& text = "__default__");
+	BusyComponent(Window* window);
 	~BusyComponent(); // batocera
   
 	void onSizeChanged() override;
 	void setText(std::string txt); // batocera
 
 	void reset(); // reset to frame 0
-	
-	void render(const Transform4x4f& parentTrans) override;
-	void update(int deltaTime) override;
-
-	void setBackgroundVisible(bool visible);
-
+	virtual void render(const Transform4x4f& parentTrans); // batocera
 private:
 	NinePatchComponent mBackground;
 	ComponentGrid mGrid;

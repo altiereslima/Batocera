@@ -5,7 +5,6 @@
 #include "utils/StringUtil.h"
 #include "Log.h"
 #include "math/Misc.h"
-#include "LocaleES.h"
 
 #ifdef WIN32
 #include <Windows.h>
@@ -20,7 +19,9 @@ std::map< std::pair<std::string, int>, std::weak_ptr<Font> > Font::sFontMap;
 Font::FontFace::FontFace(ResourceData&& d, int size) : data(d)
 {
 	int err = FT_New_Memory_Face(sLibrary, data.ptr.get(), (FT_Long)data.length, 0, &face);
-	if (!err)
+	assert(!err);
+	
+	if(!err)
 		FT_Set_Pixel_Sizes(face, 0, size);
 }
 
@@ -32,9 +33,7 @@ Font::FontFace::~FontFace()
 
 void Font::initLibrary()
 {
-	if (sLibrary != nullptr)
-		return;
-
+	assert(sLibrary == NULL);
 	if(FT_Init_FreeType(&sLibrary))
 	{
 		sLibrary = NULL;
@@ -45,9 +44,8 @@ void Font::initLibrary()
 size_t Font::getMemUsage() const
 {
 	size_t memUsage = 0;
-	
-	for(auto tex : mTextures)
-		memUsage += (tex->textureId != 0 ? tex->textureSize.x() * tex->textureSize.y() * 4 : 0);
+	for(auto it = mTextures.cbegin(); it != mTextures.cend(); it++)
+		memUsage += it->textureSize.x() * it->textureSize.y() * 4;
 
 	for(auto it = mFaceCache.cbegin(); it != mFaceCache.cend(); it++)
 		memUsage += it->second->data.length;
@@ -78,7 +76,6 @@ size_t Font::getTotalMemUsage()
 Font::Font(int size, const std::string& path) : mSize(size), mPath(path)
 {
 	mSize = size;
-	//if(mSize > 160) mSize = 160; // maximize the font size while it is causing issues on linux
 
 	// GPI
 	if (Renderer::isSmallScreen())
@@ -90,9 +87,8 @@ Font::Font(int size, const std::string& path) : mSize(size), mPath(path)
 			mSize = size * 1.5;
 	}
 
-	if (mSize == 0)
-		mSize = 2;
-
+	assert(mSize > 0);
+	
 	mLoaded = true;
 	mMaxGlyphHeight = 0;
 
@@ -111,35 +107,26 @@ Font::Font(int size, const std::string& path) : mSize(size), mPath(path)
 
 Font::~Font()
 {
+	for (auto it = mGlyphMap.cbegin(); it != mGlyphMap.cend(); it++)
+		delete it->second;
+
 	unload();
-
-	for (auto tex : mTextures)
-		delete tex;
-
-	mTextures.clear();
 }
 
 void Font::reload()
 {
 	if (mLoaded)
 		return;
-	
-	rebuildTextures();
-	clearFaceCache();
-	Renderer::bindTexture(0);
 
+	rebuildTextures();
 	mLoaded = true;
 }
 
-bool Font::unload()
+bool  Font::unload()
 {
 	if (mLoaded)
-	{		
-		for (auto tex : mTextures)
-			tex->deinitTexture();
-
-		clearFaceCache();
-
+	{
+		unloadTextures();
 		mLoaded = false;
 		return true;
 	}
@@ -165,6 +152,14 @@ std::shared_ptr<Font> Font::get(int size, const std::string& path)
 	return font;
 }
 
+void Font::unloadTextures()
+{
+	for(auto it = mTextures.begin(); it != mTextures.end(); it++)
+	{
+		it->deinitTexture();
+	}
+}
+
 Font::FontTexture::FontTexture()
 {
 	textureId = 0;
@@ -183,7 +178,8 @@ bool Font::FontTexture::findEmpty(const Vector2i& size, Vector2i& cursor_out)
 	if(size.x() >= textureSize.x() || size.y() >= textureSize.y())
 		return false;
 
-	if(writePos.x() + size.x() >= textureSize.x() && writePos.y() + rowHeight + size.y() + 1 < textureSize.y())
+	if(writePos.x() + size.x() >= textureSize.x() &&
+		writePos.y() + rowHeight + size.y() + 1 < textureSize.y())
 	{
 		// row full, but it should fit on the next row
 		// move cursor to next row
@@ -191,7 +187,8 @@ bool Font::FontTexture::findEmpty(const Vector2i& size, Vector2i& cursor_out)
 		rowHeight = 0;
 	}
 
-	if(writePos.x() + size.x() >= textureSize.x() || writePos.y() + size.y() >= textureSize.y())
+	if(writePos.x() + size.x() >= textureSize.x() ||
+		writePos.y() + size.y() >= textureSize.y())
 	{
 		// nope, still won't fit
 		return false;
@@ -208,12 +205,8 @@ bool Font::FontTexture::findEmpty(const Vector2i& size, Vector2i& cursor_out)
 
 void Font::FontTexture::initTexture()
 {
-	if (textureId == 0)
-	{
-		textureId = Renderer::createTexture(Renderer::Texture::ALPHA, true, false, textureSize.x(), textureSize.y(), nullptr);
-		if (textureId == 0)
-			LOG(LogError) << "FontTexture::initTexture() failed to create texture " << textureSize.x() << "x" << textureSize.y();
-	}
+	assert(textureId == 0);
+	textureId = Renderer::createTexture(Renderer::Texture::ALPHA, false, false, textureSize.x(), textureSize.y(), nullptr);
 }
 
 void Font::FontTexture::deinitTexture()
@@ -230,56 +223,82 @@ void Font::getTextureForNewGlyph(const Vector2i& glyphSize, FontTexture*& tex_ou
 	if(mTextures.size())
 	{
 		// check if the most recent texture has space
-		tex_out = mTextures.back();
+		tex_out = &mTextures.back();
 
 		// will this one work?
 		if(tex_out->findEmpty(glyphSize, cursor_out))
 			return; // yes
-
-		LOG(LogDebug) << "Glyph texture cache full, creating a new texture cache for " << Utils::FileSystem::getFileName(mPath) << " " << mSize << "pt";
 	}
 
 	// current textures are full,
 	// make a new one
-	FontTexture* tex = new FontTexture();
-
-	int x = Math::min(2048, mSize * 64);
-	int y = Math::min(2048, Math::max(glyphSize.y(), mSize) + 2) * 1.2;
-
-	tex->textureSize = Vector2i(x, y);
-	tex->initTexture();
-
-	tex_out = tex;
-
-	mTextures.push_back(tex);
+	mTextures.push_back(FontTexture());
+	tex_out = &mTextures.back();
+	tex_out->initTexture();
 	
 	bool ok = tex_out->findEmpty(glyphSize, cursor_out);
 	if(!ok)
 	{
 		LOG(LogError) << "Glyph too big to fit on a new texture (glyph size > " << tex_out->textureSize.x() << ", " << tex_out->textureSize.y() << ")!";
-		delete tex;
 		tex_out = NULL;
 	}
 }
 
 std::vector<std::string> getFallbackFontPaths()
 {
-	std::vector<std::string> fallbackFonts = 
-	{
+#ifdef WIN32
+	// Windows
+
+	// get this system's equivalent of "C:\Windows" (might be on a different drive or in a different folder)
+	// so we can check the Fonts subdirectory for fallback fonts
+	TCHAR winDir[MAX_PATH];
+	GetWindowsDirectory(winDir, MAX_PATH);
+	std::string fontDir = winDir;
+	fontDir += "\\Fonts\\";
+
+	const char* fontNames[] = {
 		":/fontawesome-webfont.ttf",
-		":/DroidSansFallbackFull.ttf",// japanese, chinese, present on Debian
-		":/NanumMyeongjo.ttf", // korean font		
-		":/Cairo.ttf" // arabic
+		"arial.ttf",   // latin
+		"meiryo.ttc", // japanese
+		"simhei.ttf" // chinese				
 	};
 
-	std::vector<std::string> paths;
+	//prepend to font file names
+	std::vector<std::string> fontPaths;
+	fontPaths.reserve(sizeof(fontNames) / sizeof(fontNames[0]));
 
-	for (auto font : fallbackFonts)
-		if (ResourceManager::getInstance()->fileExists(font))
-			paths.push_back(font);
+	for(unsigned int i = 0; i < sizeof(fontNames) / sizeof(fontNames[0]); i++)
+	{
+		std::string path = Utils::String::startsWith(fontNames[i], ":/") ? fontNames[i] : fontDir + fontNames[i];
+		if(ResourceManager::getInstance()->fileExists(path))
+			fontPaths.push_back(path);
+	}
 
-	paths.shrink_to_fit();
-	return paths;
+	fontPaths.shrink_to_fit();
+	return fontPaths;
+
+#else
+	// Linux
+
+	// batocera
+	const char* paths[] = {
+		":/DroidSansFallbackFull.ttf",// japanese, chinese, present on Debian
+		":/fontawesome_webfont.ttf",
+		":/fontawesome-webfont.ttf",
+		":/NanumMyeongjo.ttf", // korean font
+	};
+
+	std::vector<std::string> fontPaths;
+	for(unsigned int i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+	{
+		if(ResourceManager::getInstance()->fileExists(paths[i]))
+			fontPaths.push_back(paths[i]);
+	}
+
+	fontPaths.shrink_to_fit();
+	return fontPaths;
+
+#endif
 }
 
 FT_Face Font::getFaceForChar(unsigned int id)
@@ -365,12 +384,11 @@ Font::Glyph* Font::getGlyph(unsigned int id)
 	Glyph* pGlyph = new Glyph();
 	
 	pGlyph->texture = tex;
-	pGlyph->texPos = Vector2f((float)cursor.x() / (float)tex->textureSize.x(), (float)cursor.y() / (float)tex->textureSize.y());
-	pGlyph->texSize = Vector2f((float)glyphSize.x() / (float)tex->textureSize.x(), (float)glyphSize.y() / (float)tex->textureSize.y());
+	pGlyph->texPos = Vector2f(cursor.x() / (float)tex->textureSize.x(), cursor.y() / (float)tex->textureSize.y());
+	pGlyph->texSize = Vector2f(glyphSize.x() / (float)tex->textureSize.x(), glyphSize.y() / (float)tex->textureSize.y());
+
 	pGlyph->advance = Vector2f((float)g->metrics.horiAdvance / 64.0f, (float)g->metrics.vertAdvance / 64.0f);
-	pGlyph->bearing = Vector2f((float)g->metrics.horiBearingX / 64.0f, (float)g->metrics.horiBearingY / 64.0f);	
-	pGlyph->cursor = cursor;
-	pGlyph->glyphSize = glyphSize;
+	pGlyph->bearing = Vector2f((float)g->metrics.horiBearingX / 64.0f, (float)g->metrics.horiBearingY / 64.0f);
 
 	// upload glyph bitmap to texture
 	Renderer::updateTexture(tex->textureId, Renderer::Texture::ALPHA, cursor.x(), cursor.y(), glyphSize.x(), glyphSize.y(), g->bitmap.buffer);
@@ -392,8 +410,10 @@ Font::Glyph* Font::getGlyph(unsigned int id)
 void Font::rebuildTextures()
 {
 	// recreate OpenGL textures
-	for(auto tex : mTextures)
-		tex->initTexture();
+	for(auto it = mTextures.begin(); it != mTextures.end(); it++)
+	{
+		it->initTexture();
+	}
 
 	// reupload the texture data
 	for(auto it = mGlyphMap.cbegin(); it != mGlyphMap.cend(); it++)
@@ -404,13 +424,14 @@ void Font::rebuildTextures()
 		// load the glyph bitmap through FT
 		FT_Load_Char(face, it->first, FT_LOAD_RENDER);
 
-		Glyph* glyph = it->second;
+		FontTexture* tex = it->second->texture;
+		
+		// find the position/size
+		Vector2i cursor((int)(it->second->texPos.x() * tex->textureSize.x()), (int)(it->second->texPos.y() * tex->textureSize.y()));
+		Vector2i glyphSize((int)(it->second->texSize.x() * tex->textureSize.x()), (int)(it->second->texSize.y() * tex->textureSize.y()));
 		
 		// upload to texture
-		Renderer::updateTexture(glyph->texture->textureId, Renderer::Texture::ALPHA,
-			glyph->cursor.x(), glyph->cursor.y(),
-			glyph->glyphSize.x(), glyph->glyphSize.y(),
-			glyphSlot->bitmap.buffer);
+		Renderer::updateTexture(tex->textureId, Renderer::Texture::ALPHA, cursor.x(), cursor.y(), glyphSize.x(), glyphSize.y(), glyphSlot->bitmap.buffer);
 	}
 }
 
@@ -422,21 +443,14 @@ void Font::renderTextCache(TextCache* cache)
 		return;
 	}
 
-	int tex = -1;
-
-	for(auto& vertex : cache->vertexLists)
-	{		
-		if (vertex.textureIdPtr == nullptr)
+	for(auto it = cache->vertexLists.cbegin(); it != cache->vertexLists.cend(); it++)
+	{
+		if (*it->textureIdPtr == 0)
 			continue;
 		
-		if (tex != *vertex.textureIdPtr)
-		{
-			tex = *vertex.textureIdPtr;
-			Renderer::bindTexture(tex);			
-		}
-
-		if (tex != 0)
-			Renderer::drawTriangleStrips(&vertex.verts[0], vertex.verts.size());
+		Renderer::bindTexture(*it->textureIdPtr);
+		Renderer::drawTriangleStrips(&it->verts[0], it->verts.size());
+		Renderer::bindTexture(0);		
 	}
 }
 
@@ -450,8 +464,7 @@ void Font::renderGradientTextCache(TextCache* cache, unsigned int colorTop, unsi
 
 	for (auto it = cache->vertexLists.cbegin(); it != cache->vertexLists.cend(); it++)
 	{
-		if (*it->textureIdPtr == 0)
-			continue;
+		assert(*it->textureIdPtr != 0);
 
 		std::vector<Renderer::Vertex> vxs;
 		vxs.resize(it->verts.size());
@@ -491,69 +504,11 @@ void Font::renderGradientTextCache(TextCache* cache, unsigned int colorTop, unsi
 		}
 
 		Renderer::bindTexture(*it->textureIdPtr);
-		Renderer::drawTriangleStrips(&vxs[0], vxs.size());		
+		Renderer::drawTriangleStrips(&vxs[0], vxs.size());
+		Renderer::bindTexture(0);
 	}
 }
 
-std::string tryFastBidi(const std::string& text)
-{
-	std::string ret = "";
-
-	size_t lastCursor = 0;
-	size_t i = 0;
-	while (i < text.length())
-	{
-		const char&  c = text[i];
-		
-		if ((c & 0xE0) == 0xC0)
-		{
-			if ((c & 0x10) == 0x10)
-			{
-				ret.insert(lastCursor, text.substr(i + 1, 1));
-				ret.insert(lastCursor, text.substr(i, 1));
-				i += 2;
-			}
-			else
-			{
-				ret += text[i++];
-				ret += text[i++];
-				lastCursor = i;
-			}
-		}
-		else if ((c & 0xF0) == 0xE0)
-		{
-			ret += text[i++];
-			ret += text[i++];
-			ret += text[i++];
-			lastCursor = i;
-		}
-		else if ((c & 0xF8) == 0xF0)
-		{
-			ret += text[i++];
-			ret += text[i++];
-			ret += text[i++];
-			ret += text[i++];
-			lastCursor = i;
-		}
-		else
-		{
-			if (c == 32 && 
-				i + 1 < text.length() && (text[i+1] & 0xE0) == 0xC0 && (text[i + 1] & 0x10) == 0x10 && 
-				i > 0 && (text[i - 1] & 0xE0) != 0xC0 && (text[i -1 ] & 0x10) != 0x10)
-			{
-				ret.insert(lastCursor, text.substr(i, 1));
-				i++;
-			}
-			else
-			{
-				ret += text[i++];
-				lastCursor = i;
-			}
-		}
-	}
-
-	return ret;
-}
 
 Vector2f Font::sizeText(std::string text, float lineSpacing)
 {
@@ -597,10 +552,8 @@ float Font::getHeight(float lineSpacing) const
 float Font::getLetterHeight()
 {
 	Glyph* glyph = getGlyph('S');
-	if (glyph != nullptr)
-		return glyph->glyphSize.y();
-
-	return mSize;
+	assert(glyph);
+	return glyph->texSize.y() * glyph->texture->textureSize.y();
 }
 
 //the worst algorithm ever written
@@ -716,9 +669,9 @@ float Font::getNewlineStartOffset(const std::string& text, const unsigned int& c
 	}
 }
 
-TextCache* Font::buildTextCache(const std::string& _text, Vector2f offset, unsigned int color, float xLen, Alignment alignment, float lineSpacing)
+TextCache* Font::buildTextCache(const std::string& text, Vector2f offset, unsigned int color, float xLen, Alignment alignment, float lineSpacing)
 {
-	float x = offset[0] + (xLen != 0 ? getNewlineStartOffset(_text, 0, xLen, alignment) : 0);
+	float x = offset[0] + (xLen != 0 ? getNewlineStartOffset(text, 0, xLen, alignment) : 0);
 	
 	float yTop = getGlyph('S')->bearing.y();
 	float yBot = getHeight(lineSpacing);
@@ -727,51 +680,6 @@ TextCache* Font::buildTextCache(const std::string& _text, Vector2f offset, unsig
 	// vertices by texture
 	std::map< FontTexture*, std::vector<Renderer::Vertex> > vertMap;
 
-	std::string text = EsLocale::isRTL() ? tryFastBidi(_text) : _text;
-
-	std::map<int, int> tabStops;
-	int tabIndex = 0;
-
-	if (alignment == ALIGN_LEFT && text.find("\t") != std::string::npos)
-	{
-		for (auto line : Utils::String::split(text, '\n', true))
-		{
-			if (line.find("\t") == std::string::npos)
-				continue;
-
-			tabIndex = 0;
-			int curTab = 0;
-			int xpos = x;
-
-			size_t pos = 0;
-			while (pos < text.length())
-			{
-				unsigned int character = Utils::String::chars2Unicode(text, pos); // also advances cursor
-				if (character == 0 || character == '\r')
-					continue;
-
-				if (character == '\t')
-				{
-					auto it = tabStops.find(tabIndex);
-					if (it != tabStops.cend())
-						it->second = Math::max(it->second, xpos);
-					else
-						tabStops[tabIndex] = xpos;
-
-					curTab = xpos;
-					tabIndex++;
-				}
-
-				auto glyph = getGlyph(character);
-				if (glyph == NULL)
-					continue;
-
-				xpos += glyph->advance.x();
-			}
-		}
-	}
-
-	tabIndex = 0;
 	size_t cursor = 0;
 	while(cursor < text.length())
 	{
@@ -779,32 +687,14 @@ TextCache* Font::buildTextCache(const std::string& _text, Vector2f offset, unsig
 		Glyph* glyph;
 
 		// invalid character
-		if (character == 0)
-			continue;
-
-		if (character == '\r')
+		if(character == 0)
 			continue;
 
 		if(character == '\n')
 		{
-			tabIndex = 0;
 			y += getHeight(lineSpacing);
 			x = offset[0] + (xLen != 0 ? getNewlineStartOffset(text, (const unsigned int)cursor /* cursor is already advanced */, xLen, alignment) : 0);
 			continue;
-		}
-
-		if (character == '\t')
-		{
-			auto it = tabStops.find(tabIndex);
-			if (it != tabStops.cend())
-			{
-				x = it->second + Renderer::getScreenWidth() * 0.01f;
-				tabIndex++;
-				continue;
-			}
-
-			character = ' ';
-			tabIndex++;
 		}
 
 		glyph = getGlyph(character);
@@ -817,12 +707,13 @@ TextCache* Font::buildTextCache(const std::string& _text, Vector2f offset, unsig
 		Renderer::Vertex* vertices = verts.data() + oldVertSize;
 
 		const float        glyphStartX    = x + glyph->bearing.x();
+		const Vector2i&    textureSize    = glyph->texture->textureSize;
 		const unsigned int convertedColor = Renderer::convertColor(color);
 
 		vertices[1] = { { glyphStartX                                       , y - glyph->bearing.y()                                          }, { glyph->texPos.x(),                      glyph->texPos.y()                      }, convertedColor };
-		vertices[2] = { { glyphStartX                                       , y - glyph->bearing.y() + (glyph->glyphSize.y())                 }, { glyph->texPos.x(),                      glyph->texPos.y() + glyph->texSize.y() }, convertedColor };
-		vertices[3] = { { glyphStartX + glyph->glyphSize.x()                , y - glyph->bearing.y()                                          }, { glyph->texPos.x() + glyph->texSize.x(), glyph->texPos.y()                      }, convertedColor };
-		vertices[4] = { { glyphStartX + glyph->glyphSize.x()                , y - glyph->bearing.y() + (glyph->glyphSize.y())                 }, { glyph->texPos.x() + glyph->texSize.x(), glyph->texPos.y() + glyph->texSize.y() }, convertedColor };
+		vertices[2] = { { glyphStartX                                       , y - glyph->bearing.y() + (glyph->texSize.y() * textureSize.y()) }, { glyph->texPos.x(),                      glyph->texPos.y() + glyph->texSize.y() }, convertedColor };
+		vertices[3] = { { glyphStartX + glyph->texSize.x() * textureSize.x(), y - glyph->bearing.y()                                          }, { glyph->texPos.x() + glyph->texSize.x(), glyph->texPos.y()                      }, convertedColor };
+		vertices[4] = { { glyphStartX + glyph->texSize.x() * textureSize.x(), y - glyph->bearing.y() + (glyph->texSize.y() * textureSize.y()) }, { glyph->texPos.x() + glyph->texSize.x(), glyph->texPos.y() + glyph->texSize.y() }, convertedColor };
 
 		// round vertices
 		for(int i = 1; i < 5; ++i)
@@ -881,7 +772,7 @@ std::shared_ptr<Font> Font::getFromTheme(const ThemeData::ThemeElement* elem, un
 	int size = (orig ? orig->mSize : FONT_SIZE_MEDIUM);
 	std::string path = (orig ? orig->mPath : getDefaultPath());
 
-	float sh = (float) Math::min(Renderer::getScreenHeight(), Renderer::getScreenWidth());
+	float sh = (float)Renderer::getScreenHeight();
 	if(properties & FONT_SIZE && elem->has("fontSize")) 
 	{
 		if ((int)(sh * elem->get<float>("fontSize")) > 0)
@@ -891,7 +782,7 @@ std::shared_ptr<Font> Font::getFromTheme(const ThemeData::ThemeElement* elem, un
 	if(properties & FONT_PATH && elem->has("fontPath"))
 	{
 		std::string tmppath = elem->get<std::string>("fontPath");
-		if (!tmppath.empty())
+		if (ResourceManager::getInstance()->fileExists(tmppath))
 			path = tmppath;
 	}
 

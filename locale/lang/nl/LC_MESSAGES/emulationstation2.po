@@ -2,1594 +2,620 @@ msgid ""
 msgstr ""
 "Project-Id-Version: emulationstation\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-03-23 23:34+0100\n"
-"PO-Revision-Date: \n"
-"Last-Translator: \n"
-"Language-Team: \n"
+"POT-Creation-Date: 2020-03-02 21:30+0100\n"
 "Language: nl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.3.1\n"
+"X-Generator: POEditor.com\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "UPDATE AVAILABLE"
-msgstr "UPDATE BESCHIKBAAR"
-
-msgid "Name"
-msgstr "Naam"
-
-msgid "enter game name"
-msgstr "wijzig spelnaam"
-
-msgid "Description"
-msgstr "Beschrijving"
-
-msgid "enter description"
-msgstr "voeg beschrijving toe"
-
-msgid "Emulator"
-msgstr "Emulator"
-
-msgid "emulator"
-msgstr "emulator"
-
-msgid "Core"
-msgstr "Core"
-
-msgid "core"
-msgstr "core"
-
-msgid "Image"
-msgstr "Beeld"
-
-msgid "enter path to image"
-msgstr "voer pad pad naar afbeelding in"
-
-msgid "Video"
-msgstr "Video"
-
-msgid "enter path to video"
-msgstr "voer pad naar video in"
-
-msgid "Logo"
+msgid "UPDATING BATOCERA"
 msgstr ""
 
-msgid "enter path to logo"
+msgid "UPDATE IS READY"
 msgstr ""
 
-msgid "Box"
+msgid "REBOOT SYSTEM TO APPLY"
 msgstr ""
-
-msgid "enter path to box"
-msgstr ""
-
-msgid "Fan art"
-msgstr ""
-
-msgid "enter path to fanart"
-msgstr ""
-
-msgid "Title shot"
-msgstr ""
-
-msgid "enter path to title shot"
-msgstr ""
-
-msgid "Manual"
-msgstr ""
-
-msgid "enter path to manual"
-msgstr ""
-
-msgid "Map"
-msgstr ""
-
-msgid "enter path to map"
-msgstr ""
-
-msgid "Cartridge"
-msgstr ""
-
-msgid "enter path to cartridge"
-msgstr ""
-
-msgid "Alt BoxArt"
-msgstr ""
-
-msgid "enter path to alt boxart"
-msgstr ""
-
-msgid "Box backside"
-msgstr ""
-
-msgid "enter path to box background"
-msgstr ""
-
-msgid "Wheel"
-msgstr ""
-
-msgid "enter path to wheel"
-msgstr ""
-
-msgid "Mix"
-msgstr ""
-
-msgid "enter path to mix"
-msgstr ""
-
-msgid "Rating"
-msgstr "Beoordeling"
-
-msgid "enter rating"
-msgstr "wijzig beoordeling"
-
-msgid "Release date"
-msgstr "Datum publicatie"
-
-msgid "enter release date"
-msgstr "wijzig publicatie datum"
-
-msgid "Developer"
-msgstr "Ontwikkelaar"
-
-msgid "enter game developer"
-msgstr "wijzig spel ontwikkelaar"
-
-msgid "Publisher"
-msgstr "Uitgever"
-
-msgid "enter game publisher"
-msgstr "wijzig spel uitgever"
-
-msgid "Genre"
-msgstr "Genre"
-
-msgid "enter game genre"
-msgstr "wijzig spel genre"
-
-msgid "Arcade system"
-msgstr "Arcadesysteem"
-
-msgid "enter game arcade system"
-msgstr "wijzig spel arcade systeem"
-
-msgid "Players"
-msgstr "Spelers"
-
-msgid "enter number of players"
-msgstr "wijzig nummer van spelers"
-
-msgid "Favorite"
-msgstr "Favoriet"
-
-msgid "enter favorite"
-msgstr "wijzig favoriet"
-
-msgid "Hidden"
-msgstr "Verborgen"
-
-msgid "enter hidden"
-msgstr "wijzig verborgen"
-
-msgid "Kidgame"
-msgstr "Spel voor kinderen"
-
-msgid "enter kidgame"
-msgstr "wijzig spel voor kinderen"
-
-msgid "Play count"
-msgstr "Speel teller"
-
-msgid "enter number of times played"
-msgstr "wijzig aantal malen gespeeld"
-
-msgid "Last played"
-msgstr "Laatst gespeeld"
-
-msgid "enter last played date"
-msgstr "wijzig laatst gespeelde datum"
-
-msgid "Crc32"
-msgstr "Crc32"
-
-msgid "Crc32 checksum"
-msgstr "Crc32 checksum"
-
-msgid "Md5"
-msgstr "Md5"
-
-msgid "Md5 checksum"
-msgstr "Md5 checksum"
-
-msgid "Game time"
-msgstr "Speeltijd"
-
-msgid "how long the game has been played in total (seconds)"
-msgstr "hoe lang het spel in totaal is gespeeld (secondes)"
-
-msgid "Languages"
-msgstr "Talen"
-
-msgid "Region"
-msgstr "Regio"
-
-msgid "Cheevos Hash"
-msgstr ""
-
-msgid "Cheevos checksum"
-msgstr ""
-
-msgid "Cheevos Game ID"
-msgstr ""
-
-msgid "Screenscraper Game ID"
-msgstr ""
-
-msgid "all games"
-msgstr "alle spellen"
-
-msgid "last played"
-msgstr "laatst gespeeld"
-
-msgid "favorites"
-msgstr "favorieten"
-
-msgid "2 players"
-msgstr "2 spelers"
-
-msgid "4 players"
-msgstr "4 spelers"
-
-msgid "never played"
-msgstr "nooit gespeeld"
-
-msgid "retroachievements"
-msgstr ""
-
-msgid "arcade"
-msgstr "arcade"
-
-msgid "vertical arcade"
-msgstr ""
-
-msgid "collections"
-msgstr "verzamelingen"
-
-#, c-format
-msgid "Added '%s' to '%s'"
-msgstr "'%s' aan '%s' toegevoegd"
-
-#, c-format
-msgid "Removed '%s' from '%s'"
-msgstr "Verwijderd '%s' uit '%s'"
-
-msgid "This collection is empty."
-msgstr "Deze verzameling is leeg."
-
-#. TRANSLATION: number of developpers / various developpers
-msgid "None"
-msgstr "Geen"
-
-msgid "Various"
-msgstr "Diversen"
-
-#, c-format
-msgid "This collection contains %i game, including :%s"
-msgid_plural "This collection contains %i games, including :%s"
-msgstr[0] "Deze verzameling bevat %i spel, inclusief:%s"
-msgstr[1] "Deze verzameling bevat %i spellen, inclusief:%s"
-
-msgid "SCANNING BLUETOOTH"
-msgstr "ZOEKEN NAAR BLUETOOTH"
-
-msgid "Searching controllers..."
-msgstr "Zoeken naar controllers..."
-
-msgid "BLUETOOTH SCANNING IS ALREADY RUNNING."
-msgstr "SCANNEN VAN BLUETOOTH IS REEDS BEZIG."
-
-msgid "FORMATING DEVICE"
-msgstr "FORMATTEREN APPARAAT"
-
-msgid "Formating"
-msgstr "Formatteren"
-
-msgid "A REBOOT OF THE SYSTEM IS REQUIRED TO COMPLETE THE OPERATION"
-msgstr "EEN HERSTART VAN HET SYSTEEM IS BENODIGD OM DE BEWERKING TE VOLTOOIEN"
-
-msgid "DRIVE FORMAT IS ALREADY RUNNING."
-msgstr "FORMATTEREN VAN SCHIJF IS REEDS BEZIG."
-
-msgid "DOWNLOADING"
-msgstr "BEZIG MET DOWNLOADEN"
-
-msgid "THEME INSTALLED SUCCESSFULLY"
-msgstr "THEMA SUCCESVOL GEÏNSTALLEERD"
 
 msgid "AN ERROR OCCURED"
-msgstr "ER IS EEN PROBLEEM OPGETREDEN"
+msgstr "Er is een probleem opgetreden"
 
-msgid "THEME UNINSTALLED SUCCESSFULLY"
-msgstr ""
-
-msgid "BEZELS INSTALLED SUCCESSFULLY"
-msgstr "BEZELS SUCCESVOL GEÏNSTALLEERD"
-
-msgid "BEZELS UNINSTALLED SUCCESSFULLY"
-msgstr ""
-
-msgid "PACKAGE INSTALLED SUCCESSFULLY"
-msgstr ""
-
-msgid "PACKAGE REMOVED SUCCESSFULLY"
-msgstr ""
-
-msgid "FILTER GAMELIST BY"
-msgstr "FILTER SPELLIJST OP"
-
-msgid "EDIT DYNAMIC COLLECTION FILTERS"
-msgstr "BEWERK DYNAMISCHE VERZAMELING FILTERS"
-
-msgid "RESET ALL FILTERS"
-msgstr "VERWIJDER ALLE FILTERS"
-
-msgid "BACK"
-msgstr "TERUG"
-
-msgid "FIND GAMES"
-msgstr "ZOEK SPELLEN"
-
-msgid "Unknown"
-msgstr "Onbekend"
+msgid "REALLY UPDATE?"
+msgstr "Wil je echt updaten?"
 
 msgid "YES"
-msgstr "JA"
+msgstr "Ja"
 
 msgid "NO"
-msgstr "NEE"
+msgstr "Nee"
 
-msgid "SYSTEMS"
-msgstr "SYSTEMEN"
-
-msgid "GAME COLLECTION SETTINGS"
-msgstr "SPELVERZAMELINGEN"
-
-msgid "COLLECTIONS TO DISPLAY"
-msgstr "TE TONEN VERZAMELINGEN"
-
-msgid "SYSTEMS DISPLAYED"
-msgstr "GETOONDE SYSTEMEN"
-
-msgid "GROUPED SYSTEMS"
-msgstr "GEGROEPEERDE SYSTEMEN"
-
-msgid "CREATE CUSTOM COLLECTION"
-msgstr "MAAK AANGEPASTE VERZAMELING"
-
-msgid "CREATE NEW CUSTOM COLLECTION FROM THEME"
-msgstr "MAAK NIEUW AANGEPASTE VERZAMELING VANUIT THEMA"
-
-msgid "SELECT THEME FOLDER"
-msgstr "SELECTEER THEMAMAP"
-
-msgid "CREATE NEW EDITABLE COLLECTION"
-msgstr "MAAK NIEUWE BEWERKBARE VERZAMELING"
-
-msgid "New Collection Name"
-msgstr "Naam van nieuwe verzameling"
-
-msgid "CREATE NEW DYNAMIC COLLECTION"
-msgstr "MAAK NIEUWE DYNAMISCHE VERZAMELING"
-
-msgid "OPTIONS"
-msgstr "OPTIES"
-
-msgid "SORT COLLECTIONS AND SYSTEMS"
-msgstr ""
-
-msgid "ALPHABETICALLY"
-msgstr ""
-
-msgid "BY MANUFACTURER"
-msgstr ""
-
-msgid "BY HARDWARE TYPE"
-msgstr ""
-
-msgid "BY RELEASE YEAR"
-msgstr ""
-
-msgid "SORT SYSTEMS"
-msgstr ""
-
-msgid "START ON SYSTEM"
-msgstr "START MET SYSTEEM"
-
-msgid "NONE"
-msgstr "GEEN"
-
-msgid "RESTORE LAST SELECTED"
-msgstr ""
-
-msgid "START ON GAMELIST"
-msgstr "START MET SPELLIJST"
-
-msgid "GROUP UNTHEMED CUSTOM COLLECTIONS"
-msgstr "GROEPEER AANGEPASTE VERZAMELINGEN ZONDER THEMA"
-
-msgid "SHOW SYSTEM NAME IN COLLECTIONS"
-msgstr "TOON SYSTEEMNAAM IN VERZAMELINGEN"
-
-msgid "SHOW GAMES OF HIDDEN SYSTEMS IN COLLECTIONS"
-msgstr ""
-
-msgid "UPDATE GAMES LISTS"
-msgstr "VERVERS SPELLIJST"
-
-msgid "Loading..."
-msgstr "Laden..."
-
-msgid "SELECT COLLECTIONS"
-msgstr "SELECTEER VERZAMELINGEN"
-
-msgid "AUTOMATIC COLLECTIONS"
-msgstr ""
-
-msgid "ARCADE SYSTEMS"
-msgstr "ARCADE SYSTEMEN"
-
-msgid "AUTOMATIC GAME COLLECTIONS"
-msgstr "AUTOMATISCHE SPELVERZAMELINGEN"
-
-msgid "EDITABLE COLLECTIONS"
-msgstr "BEWERKBARE VERZAMELINGEN"
-
-msgid "DYNAMIC COLLECTIONS"
-msgstr "DYNAMISCHE VERZAMELINGEN"
-
-msgid "CUSTOM GAME COLLECTIONS"
-msgstr "AANGEPASTE SPELVERZAMELINGEN"
-
-msgid "PLEASE WAIT"
-msgstr "EEN MOMENT GEDULD"
-
-#, c-format
-msgid "%d%% (%d of %d)"
-msgstr ""
-
-msgid "RETROACHIEVEMENTS"
-msgstr "RETROACHIEVEMENTS"
-
-msgid "Points"
-msgstr ""
-
-msgid "Rank"
-msgstr ""
-
-msgid "VIEW DETAILS"
-msgstr ""
-
-msgid "LAUNCH"
-msgstr "STARTEN"
-
-msgid "FINISHED"
-msgstr "KLAAR"
+msgid "NETWORK CONNECTION NEEDED"
+msgstr "Plug een netwerkkabel"
 
 msgid "OK"
 msgstr "OK"
 
-msgid "VIEW OPTIONS"
-msgstr "WEERGAVEOPTIES"
-
-msgid "go back"
-msgstr "ga terug"
-
-msgid "NAVIGATION"
-msgstr "NAVIGATIE"
-
-msgid "JUMP TO LETTER"
-msgstr "Ga naar letter"
-
-msgid "SELECT RANDOM GAME"
-msgstr ""
-
-msgid "SORT GAMES BY"
-msgstr "SORTEER OP"
-
-msgid "OTHER FILTERS"
-msgstr "ANDERE FILTERS"
-
-msgid "COLLECTION"
-msgstr "VERZAMELINGEN"
-
-msgid "DELETE COLLECTION"
-msgstr "VERWIJDER VERZAMELING"
-
-msgid "GAMELIST VIEW STYLE"
-msgstr "SPELLLIJST STIJL"
-
-msgid "automatic"
-msgstr "automatisch"
-
-msgid "VIEW CUSTOMISATION"
-msgstr "WEERGAVE AANPASSINGEN"
-
-msgid "GAME OPTIONS"
-msgstr "SPELOPTIES"
-
-msgid "ADVANCED SYSTEM OPTIONS"
-msgstr "GEAVANCEERDE SYSTEEMOPTIES"
-
-msgid "RESET FILTERS"
-msgstr ""
-
-msgid "FILTER GAMES BY TEXT"
-msgstr "FILTER SPELLEN OP TEKST"
-
-msgid "THIS FUNCTION IS DISABLED WHEN SCRAPING IS RUNNING"
-msgstr "DEZE FUNCTIE IS UITGESCHAKELD WANNEER ER GESCRAPED WORDT"
-
-msgid "CLOSE"
-msgstr "SLUITEN"
-
-msgid "ARE YOU SURE YOU WANT TO DELETE THIS ITEM ?"
-msgstr ""
+msgid "NO UPDATE AVAILABLE"
+msgstr "Er is geen update beschikbaar"
 
 msgid "INPUT"
-msgstr "INVOER"
+msgstr "Invoer"
 
 msgid "SEARCH"
-msgstr "ZOEKEN"
+msgstr "Zoeken"
 
 msgid "CANCEL"
-msgstr "STOPPEN"
+msgstr "Stoppen"
 
 msgid "CONNECT TO NETPLAY"
-msgstr "VERBIND MET NETPLAY"
+msgstr ""
 
 msgid "Select the game you want to join"
-msgstr "Selecteer het spel dat je wilt betreden"
+msgstr ""
 
 msgid "REFRESH"
-msgstr "VERVERS"
+msgstr ""
+
+msgid "CLOSE"
+msgstr "Sluiten"
+
+msgid "PLEASE WAIT"
+msgstr ""
 
 msgid "FAILED"
-msgstr "MISLUKT"
-
-msgid "UNKNOWN ROM VERSION"
 msgstr ""
 
-msgid "DIFFERENT ROM"
-msgstr ""
+msgid "BACK"
+msgstr "Terug"
 
-msgid "SAME ROM"
-msgstr ""
-
-msgid "UNAVAILABLE CORE"
-msgstr "CORE NIET BESCHIKBAAR"
+msgid "LAUNCH"
+msgstr "Spelen"
 
 msgid "AVAILABLE GAMES"
-msgstr "BESCHIKBARE GAMES"
+msgstr ""
 
 msgid "UNAVAILABLE GAMES"
-msgstr "ONBESCHIKBARE GAMES"
+msgstr ""
 
 msgid "NO GAME FOUND"
-msgstr "GEEN SPEL GEVONDEN"
-
-msgid "JOIN GAME"
 msgstr ""
 
-msgid "WATCH GAME"
+msgid "go back"
 msgstr ""
 
-msgid "MANUAL INPUT"
-msgstr "HANDMATIGE INVOER"
+msgid "JUMP TO..."
+msgstr "Ga naar..."
 
-msgid "NO WIFI NETWORKS FOUND"
-msgstr "GEEN WIFI-NETWERKEN GEVONDEN"
+msgid "SORT GAMES BY"
+msgstr "Sorteer spellen op"
 
-msgid "SEARCHING WIFI NETWORKS"
-msgstr "ZOEKEN NAAR WIFI-NETWERKEN"
-
-msgid "FORGET A BLUETOOTH CONTROLLER"
-msgstr "VERGEET EEN BLUETOOTH-CONTROLLER"
-
-msgid "REMOVE ALL"
-msgstr "VERWIJDER ALLES"
-
-msgid "NO BLUETOOTH DEVICES FOUND"
-msgstr "GEEN BLUETOOTH APPARATEN GEVONDEN"
-
-msgid "CONTROLLERS LINKS HAVE BEEN DELETED."
-msgstr "GEKOPPELDE CONTROLLERS ZIJN GEWIST."
-
-msgid "RESET"
-msgstr "HERSTEL"
-
-msgid "ADD COMBINATION KEY"
+msgid "OTHER FILTERS"
 msgstr ""
 
-msgid "CONTENT DOWNLOADER"
+msgid "GAMELIST VIEW STYLE"
+msgstr "Spelllijst stijl"
+
+msgid "automatic"
 msgstr ""
 
-msgid "SELECT CONTENT TO INSTALL / REMOVE"
+msgid "VIEW CUSTOMISATION"
 msgstr ""
 
-msgid "UPDATE INSTALLED CONTENT"
+msgid "GRID SIZE"
 msgstr ""
 
-msgid "There are no items in this view"
+msgid "SHOW FAVORITES ON TOP"
 msgstr ""
 
-msgid "MISC"
+msgid "SHOW HIDDEN FILES"
 msgstr ""
 
-msgid "UPDATE"
-msgstr ""
-
-#, c-format
-msgid "'%s' ADDED TO DOWNLOAD QUEUE"
-msgstr "'%s' TOEGEVOEGD AAN DOWNLOADWACHTRIJ"
-
-msgid "REMOVE"
-msgstr ""
-
-msgid "UNINSTALL ADDED TO QUEUE"
-msgstr ""
-
-msgid "INSTALL"
-msgstr "INSTALLEER"
-
-#, c-format
-msgid "CURRENTLY IN DOWNLOAD QUEUE"
-msgstr ""
-
-msgid "NO MISSING BIOS"
-msgstr "GEEN ONTBREKENDE BIOS"
-
-msgid "MISSING BIOS"
-msgstr "ONTBREKENDE BIOS"
-
-msgid "dim"
-msgstr ""
-
-msgid "black"
-msgstr ""
-
-msgid "random video"
-msgstr ""
-
-msgid "slideshow"
+msgid "SHOW FOLDERS"
 msgstr ""
 
 msgid "always"
-msgstr "altijd"
-
-msgid "start & end"
 msgstr ""
 
 msgid "never"
-msgstr "nooit"
+msgstr "Nooit"
 
-msgid "none"
+msgid "having multiple games"
 msgstr ""
 
-msgid "systems"
+msgid "ADD/REMOVE GAMES TO THIS GAME COLLECTION"
 msgstr ""
 
-msgid "random"
+msgid "FINISH EDITING COLLECTION"
 msgstr ""
-
-msgid "SCREENSAVER SETTINGS"
-msgstr "SCREENSAVERINSTELLINGEN"
-
-msgid "SETTINGS"
-msgstr "INSTELLINGEN"
-
-msgid "SCREENSAVER AFTER"
-msgstr "SCHERMBEVEILIGING NA"
-
-msgid "SCREENSAVER BEHAVIOR"
-msgstr "SCHERMBEVEILIGING GEDRAG"
-
-msgid "STOP MUSIC ON SCREENSAVER"
-msgstr ""
-
-msgid "RANDOM VIDEO SCREENSAVER SETTINGS"
-msgstr "WILLEKEURIGE VIDEO SCREENSAVER INSTELLINGEN"
-
-msgid "SWAP VIDEO AFTER (SECS)"
-msgstr "WISSEL VIDEO NA (SEC.)"
-
-msgid "USE OMX PLAYER FOR SCREENSAVER"
-msgstr "GEBRUIK OMX PLAYER VOOR SCHERMBEVEILIGING"
-
-msgid "SHOW GAME INFO"
-msgstr "TOON SPELINFO"
-
-msgid "SHOW GAME INFO ON SCREENSAVER"
-msgstr "TOON SPELINFO ALS SCHERMBEVEILIGING"
-
-msgid "USE MARQUEE AS GAME INFO"
-msgstr "GEBRUIK BANNIER ALS SPELINFO"
-
-msgid "DECORATIONS"
-msgstr "DECORATIES"
-
-msgid "STRETCH VIDEO ON SCREENSAVER"
-msgstr "REK VIDEO BIJ SCHERMBEVEILIGING"
-
-msgid "MUTE VIDEO AUDIO"
-msgstr "DEMP GELUID BIJ VIDEO"
-
-msgid "SCREENSAVER CONTROLS"
-msgstr "SCREENSAVER BESTURING"
-
-msgid "USE CUSTOM VIDEOS"
-msgstr ""
-
-msgid "CUSTOM VIDEO DIR"
-msgstr ""
-
-msgid "CUSTOM VIDEO DIR RECURSIVE"
-msgstr ""
-
-msgid "CUSTOM VIDEO FILTER"
-msgstr ""
-
-msgid "SLIDESHOW SCREENSAVER SETTINGS"
-msgstr "SLIDESHOW SCREENSAVER INSTELLINGEN"
-
-msgid "SWAP IMAGE AFTER (SECS)"
-msgstr "WISSEL AFBEELDING NA (SEC.)"
-
-msgid "STRETCH IMAGES"
-msgstr "STREK AFBEELDING"
-
-msgid "USE CUSTOM IMAGES"
-msgstr "GEBRUIK AANGEPASTE AFBEELDINGEN"
-
-msgid "CUSTOM IMAGE DIR"
-msgstr "AANGEPASTE AFBEELDINGEN MAP"
-
-msgid "CUSTOM IMAGE DIR RECURSIVE"
-msgstr "AANGEPASTE AFBEELDINGEN MAP RECURSIEF"
-
-msgid "CUSTOM IMAGE FILTER"
-msgstr "AANGEPASTE AFBEELDINGSFILTER"
-
-msgid "PAD TO KEYBOARD CONFIGURATION"
-msgstr ""
-
-msgid "SELECT ACTIONS TO CHANGE"
-msgstr ""
-
-msgid "SAVE"
-msgstr "OPSLAAN"
-
-msgid "DELETE"
-msgstr "VERWIJDEREN"
-
-msgid "PLAYER 1"
-msgstr ""
-
-msgid "PLAYER 2"
-msgstr ""
-
-msgid "PLAYER 3"
-msgstr ""
-
-msgid "PLAYER 4"
-msgstr ""
-
-msgid "COMBINATIONS"
-msgstr ""
-
-msgid "MOUSE CURSOR"
-msgstr ""
-
-msgid "EMULATE MOUSE CURSOR"
-msgstr ""
-
-msgid "LEFT ANALOG STICK"
-msgstr ""
-
-msgid "RIGHT ANALOG STICK"
-msgstr ""
-
-msgid "EDIT DESCRIPTION"
-msgstr ""
-
-msgid "DELETE MAPPING"
-msgstr ""
-
-msgid "SAVE CHANGES?"
-msgstr "WIJZIGINGEN OPSLAAN?"
-
-msgid "ARE YOU SURE ?"
-msgstr "WEET JE HET ZEKER ?"
-
-msgid "UPDATING EMULATIONSTATION"
-msgstr ""
-
-msgid "UPDATING BATOCERA"
-msgstr "BEZIG MET UPDATEN BATOCERA"
-
-msgid "UPDATE IS READY"
-msgstr "UPDATE IS GEREED"
-
-msgid "REBOOT SYSTEM TO APPLY"
-msgstr "HERSTART SYSTEEM OM TOE TE PASSEN"
-
-msgid "REALLY UPDATE?"
-msgstr "WIL JE ECHT UPDATEN?"
-
-msgid "NETWORK CONNECTION NEEDED"
-msgstr "NETWERKVERBINDING BENODIGD"
-
-msgid "NO UPDATE AVAILABLE"
-msgstr "ER IS GEEN UPDATE BESCHIKBAAR"
-
-msgid "INSTALL BATOCERA"
-msgstr "INSTALLEER BATOCERA"
-
-msgid "TARGET DEVICE"
-msgstr "DOELAPPARAAT"
-
-msgid "SELECT"
-msgstr "SELECTEER"
-
-msgid "TARGET ARCHITECTURE"
-msgstr "DOELARCHITECTUUR"
-
-msgid "NETWORK REQUIRED"
-msgstr "NETWERK BENODIGD"
-
-msgid "INVALID PARAMETERS"
-msgstr "ONGELDIGE PARAMETERS"
-
-msgid "GAME MEDIAS"
-msgstr ""
-
-msgid "VIEW GAME MANUAL"
-msgstr ""
-
-msgid "VIEW GAME MAP"
-msgstr ""
-
-msgid "CURRENT CORE IS NOT COMPATIBLE"
-msgstr ""
-
-msgid "REQUIRED CORE"
-msgstr ""
-
-msgid "VIEW GAME ACHIEVEMENTS"
-msgstr ""
-
-msgid "GAME"
-msgstr ""
-
-msgid "SAVE SNAPSHOTS"
-msgstr ""
-
-msgid "START NETPLAY HOST"
-msgstr ""
-
-msgid "NETPLAY"
-msgstr "NETPLAY"
-
-msgid "START GAME"
-msgstr ""
-
-msgid "YOU ARE NOT CONNECTED TO A NETWORK"
-msgstr ""
-
-msgid "PUBLICLY ANNOUNCE GAME"
-msgstr ""
-
-msgid "SET PLAYER PASSWORD"
-msgstr ""
-
-msgid "SET VIEWER PASSWORD"
-msgstr ""
-
-msgid "FIND SIMILAR GAMES..."
-msgstr ""
-
-msgid "COLLECTIONS"
-msgstr ""
-
-#, c-format
-msgid "REMOVE FROM %s"
-msgstr ""
-
-#, c-format
-msgid "ADD TO %s"
-msgstr ""
-
-msgid "FAVORITES"
-msgstr "FAVORIETEN"
-
-msgid "SCRAPE"
-msgstr "SCRAPEN"
-
-msgid "EDIT PAD TO KEYBOARD CONFIGURATION"
-msgstr ""
-
-msgid "CREATE PAD TO KEYBOARD CONFIGURATION"
-msgstr ""
-
-msgid "ADVANCED GAME OPTIONS"
-msgstr "GEAVANCEERDE SPELOPTIES"
-
-msgid "EDIT FOLDER METADATA"
-msgstr "BEWERK METADATA VAN MAP"
 
 msgid "EDIT THIS GAME'S METADATA"
-msgstr "BEWERK METADATA VAN DIT SPEL"
+msgstr "Bewerk deze spelgegevens"
 
-msgid "VIEW PAD TO KEYBOARD INFORMATION"
+msgid "ADVANCED GAME OPTIONS"
 msgstr ""
 
-msgid "THEMES DOWNLOADER"
+msgid "FILTER GAMES BY TEXT"
 msgstr ""
 
-msgid "SELECT THEMES TO INSTALL / REMOVE"
+msgid "Loading..."
 msgstr ""
 
-#, c-format
-msgid "CURRENT THEME"
+msgid "THIS FUNCTION IS DISABLED WHEN SCRAPING IS RUNNING"
 msgstr ""
 
-msgid "Unlocked on"
+msgid "FILTER GAMELIST BY"
 msgstr ""
 
-msgid "THIS GAME HAS NO ACHIEVEMENT YET"
+msgid "RESET ALL FILTERS"
 msgstr ""
 
-msgid "Achievements won"
+msgid "FIND GAMES"
 msgstr ""
 
-#, c-format
-msgid "%d%% complete"
+msgid "MANUAL INPUT"
 msgstr ""
 
-msgid "AUTO SAVE"
+msgid "NO WIFI NETWORKS FOUND"
 msgstr ""
 
-msgid "SLOT"
+msgid "SEARCHING WIFI NETWORKS"
 msgstr ""
 
-msgid "START NEW GAME"
-msgstr ""
-
-msgid "START AUTO SAVE"
-msgstr ""
-
-msgid "COPY TO FREE SLOT"
-msgstr ""
-
-msgid "SCRAPE NOW"
-msgstr "NU SCRAPEN"
-
-msgid "SCRAPE THESE GAMES"
-msgstr "SCRAPE DEZE SPELLEN"
-
-msgid "All Games"
-msgstr "Alle spellen"
-
-msgid "Only missing medias"
-msgstr "Alleen missende media"
-
-msgid "FILTER"
-msgstr "FILTER"
-
-msgid "SCRAPE THESE SYSTEMS"
-msgstr "SCRAPE DEZE SYSTEMEN"
-
-msgid "START"
-msgstr "STARTEN"
-
-msgid ""
-"WARNING: SOME OF YOUR SELECTED SYSTEMS DO NOT HAVE A PLATFORM SET. RESULTS "
-"MAY BE EVEN MORE INACCURATE THAN USUAL!\n"
-"CONTINUE ANYWAY?"
-msgstr ""
-"WAARSCHUWING: SOMMIGE GESELECTEERDE SYSTEMEN HEBBEN GEEN PLATFORM INGESTELD. "
-"RESULTATEN KUNNEN MINDER NAUWKEURIG ZIJN DAN NORMAAL!\n"
-"DOORGAAN?"
-
-msgid "SCRAPING IS RUNNING. DO YOU WANT TO STOP IT ?"
-msgstr "HET SCRAPEN IS BEZIG. WIL JE HET STOPPEN ?"
-
-msgid "NO GAMES FIT THAT CRITERIA."
-msgstr "GEEN SPELLEN GEVONDEN MET DIE CRITERIA."
-
-msgid "THE BEZEL PROJECT"
-msgstr "THE BEZEL PROJECT"
-
-msgid "SELECT BEZELS TO INSTALL / REMOVE"
-msgstr ""
+msgid "FINISHED"
+msgstr "Klaar"
 
 msgid "fade"
-msgstr "vervagen"
+msgstr ""
 
 msgid "slide"
-msgstr "schuiven"
+msgstr ""
 
 msgid "instant"
-msgstr "onmiddellijk"
-
-msgid "fade & slide"
 msgstr ""
 
 msgid "System"
-msgstr "Systeem"
+msgstr ""
 
 msgid "Architecture"
-msgstr "Architectuur"
+msgstr ""
 
 msgid "Temperature"
-msgstr "Temperatuur"
-
-msgid "Available memory"
-msgstr "Beschikbaar Geheugen"
+msgstr ""
 
 msgid "Battery"
-msgstr "Accu"
+msgstr ""
 
 msgid "Cpu model"
-msgstr "Cpu model"
+msgstr ""
 
 msgid "Cpu number"
-msgstr "Cpu nummer"
-
-msgid "Cpu max frequency"
 msgstr ""
 
 msgid "Cpu feature"
-msgstr "Cpu kenmerken"
-
-msgid "SCANLINES"
-msgstr "SCANLINES"
-
-msgid "RETRO"
-msgstr "RETRO"
-
-msgid "ENHANCED"
-msgstr "VERBETERD"
-
-msgid "CURVATURE"
-msgstr "KROMMING"
-
-msgid "ZFAST"
-msgstr "ZFAST"
-
-msgid "FLATTEN-GLOW"
-msgstr "AFVLAKKEN-GLOEIEN"
-
-msgid "RGA SCALING"
 msgstr ""
 
 msgid "MAIN MENU"
-msgstr "HOOFDMENU"
+msgstr "Hoofdmenu"
 
 msgid "KODI MEDIA CENTER"
-msgstr "KODI MEDIA CENTER"
+msgstr "Kodi Media Center"
+
+msgid "RETROACHIEVEMENTS"
+msgstr "Retroarchievements"
 
 msgid "GAMES SETTINGS"
-msgstr "SPELINSTELLINGEN"
+msgstr "Instellingen van de spelletjes"
 
 msgid "CONTROLLERS SETTINGS"
-msgstr "CONTROLLERS"
+msgstr "Instellingen van de controllers"
 
 msgid "UI SETTINGS"
-msgstr "INTERFACE"
+msgstr "Instellingen van de gebruikersinterface"
 
-msgid "SOUND SETTINGS"
-msgstr "GELUID"
-
-msgid "NETWORK SETTINGS"
-msgstr "NETWERK"
-
-msgid "CONFIGURE INPUT"
-msgstr "CONFIGUREER INVOER"
-
-msgid "EMULATOR SETTINGS"
-msgstr "EMULATORINSTELLINGEN"
-
-msgid "UPDATES & DOWNLOADS"
-msgstr "UPDATES & DOWNLOADS"
-
-msgid "SYSTEM SETTINGS"
-msgstr "SYSTEEMINSTELLINGEN"
-
-msgid "INFORMATIONS"
-msgstr "ALGEMENE INFORMATIE"
-
-msgid "UNLOCK UI MODE"
+msgid "GAME COLLECTION SETTINGS"
 msgstr ""
 
-msgid "QUIT"
-msgstr "STOPPEN"
+msgid "SOUND SETTINGS"
+msgstr "Instellingen van het geluid"
 
-msgid "SCRAPER"
-msgstr "Scraper"
+msgid "NETWORK SETTINGS"
+msgstr "Instellingen van het netwerk"
+
+msgid "SCRAPE"
+msgstr "Scrape"
+
+msgid "UPDATES & DOWNLOADS"
+msgstr ""
+
+msgid "SYSTEM SETTINGS"
+msgstr "Instellingen van het systeem"
+
+msgid "INFORMATIONS"
+msgstr "Algemene informatie"
+
+msgid "QUIT"
+msgstr "Stoppen"
 
 msgid "SCRAPE FROM"
-msgstr "SCRAPE VANAF"
+msgstr "Scrape vanaf"
 
 msgid "IMAGE SOURCE"
-msgstr "BRON VAN AFBEELDING"
+msgstr ""
 
 msgid "SCREENSHOT"
-msgstr "SCHERMAFBEELDING"
+msgstr ""
 
 msgid "TITLE SCREENSHOT"
-msgstr "TITELSCHERM AFBEELDING"
+msgstr ""
 
 msgid "MIX V1"
-msgstr "MIX V1"
+msgstr ""
 
 msgid "MIX V2"
-msgstr "MIX V2"
+msgstr ""
 
 msgid "BOX 2D"
-msgstr "DOOSJE 2D"
+msgstr ""
 
 msgid "BOX 3D"
-msgstr "DOOSJE 3D"
-
-msgid "FAN ART"
 msgstr ""
 
 msgid "BOX SOURCE"
-msgstr "BRON VAN DOOSJE"
+msgstr ""
+
+msgid "NONE"
+msgstr "Geen"
 
 msgid "LOGO SOURCE"
-msgstr "BRON VAN LOGO"
+msgstr ""
 
 msgid "WHEEL"
-msgstr "WIEL"
+msgstr ""
 
 msgid "MARQUEE"
-msgstr "BANNIER"
+msgstr ""
 
 msgid "SCRAPE RATINGS"
-msgstr "SCRAPE BEOORDELINGEN"
+msgstr "Scrape beoordelingen"
 
 msgid "SCRAPE VIDEOS"
-msgstr "SCRAPE VIDEO'S"
-
-msgid "SCRAPE FANART"
-msgstr ""
-
-msgid "SCRAPE BOX BACKSIDE"
-msgstr ""
-
-msgid "SCRAPE MAP"
-msgstr ""
-
-msgid "SCRAPE MANUAL"
-msgstr ""
-
-msgid "SCRAPE PADTOKEY SETTINGS"
 msgstr ""
 
 msgid "USERNAME"
-msgstr "GEBRUIKERSNAAM"
+msgstr "Gebruikersnaam"
 
 msgid "PASSWORD"
-msgstr "WACHTWOORD"
+msgstr "Wachtwoord"
 
-msgid "ARE YOU SURE YOU WANT TO CONFIGURE INPUT?"
-msgstr "WEET JE ZEKER DAT JE DE INVOER WILT CONFIGUREREN?"
+msgid "SCRAPING IS RUNNING. DO YOU WANT TO STOP IT ?"
+msgstr ""
+
+msgid "SCRAPE NOW"
+msgstr "Nu scrapen"
+
+msgid "SCREENSAVER SETTINGS"
+msgstr ""
+
+msgid "SLIDESHOW SETTINGS"
+msgstr "Instellingen van de slideshow"
+
+msgid "RANDOM VIDEO SETTINGS"
+msgstr "Random video-instelligen"
 
 msgid "CHOOSE"
-msgstr "KIES"
+msgstr "Kies"
 
-msgid "UI MODE IS NOW UNLOCKED"
-msgstr ""
-
-msgid "PLEASE ENTER THE CODE TO UNLOCK THE CURRENT UI MODE"
-msgstr ""
+msgid "SELECT"
+msgstr "Selecteer"
 
 msgid "INFORMATION"
-msgstr "INFORMATIE"
+msgstr "Informatie"
 
 msgid "VERSION"
-msgstr "VERSIE"
+msgstr "Versie"
 
-msgid "USER DISK USAGE"
-msgstr "GEBRUIKER SCHIJFGEBRUIK"
-
-msgid "SYSTEM DISK USAGE"
-msgstr "SYSTEEM SCHIJFGEBRUIK"
+msgid "DISK USAGE"
+msgstr "Gebruikt verbruik"
 
 msgid "DEVELOPER"
-msgstr "ONTWIKKELAAR"
-
-msgid "VIDEO OPTIONS"
 msgstr ""
 
 msgid "VRAM LIMIT"
-msgstr "VRAM LIMIET"
+msgstr ""
 
 msgid "SHOW FRAMERATE"
-msgstr "TOON FRAMERATE"
+msgstr "Toon framerate"
 
 msgid "VSYNC"
-msgstr "VSYNC"
+msgstr ""
 
 msgid "OVERSCAN"
-msgstr "OVERSCAN"
+msgstr "Overscan"
 
-msgid "USE OMX PLAYER (HW ACCELERATED)"
+msgid "PRELOAD UI"
 msgstr ""
 
-msgid "TOOLS"
-msgstr "HULPMIDDELEN"
-
-msgid "LOG LEVEL"
-msgstr "LOG NIVEAU"
-
-msgid "CREATE A SUPPORT FILE"
-msgstr "SUPPORT FILE MAKEN"
-
-msgid "CREATE A SUPPORT FILE ?"
-msgstr "SUPPORT FILE MAKEN?"
-
-msgid "FILE GENERATED SUCCESSFULLY"
-msgstr "FILE AANGEMAAKT"
-
-msgid "FILE GENERATION FAILED"
-msgstr "GEEN FILE AANGEMAAKT"
-
-msgid "FORMAT A DISK"
-msgstr "FORMATTEER EEN SCHIJF"
-
-msgid "CLEAN GAMELISTS & REMOVE UNUSED MEDIAS"
+msgid "THREADED LOADING"
 msgstr ""
 
-msgid "Cleaning "
+msgid "ASYNC IMAGES LOADING"
 msgstr ""
 
-msgid "CLEAR CACHES"
+msgid "OPTIMIZE IMAGES VRAM USE"
 msgstr ""
 
-msgid "BUILD IMAGE CACHE"
-msgstr ""
-
-msgid "Building image cache"
-msgstr ""
-
-msgid "RESET FILE EXTENSIONS"
-msgstr "RESET BESTANDSEXTENSIES"
-
-msgid "REDETECT GAMES LANG/REGION"
-msgstr "HERDETECTEER TAAL/REGIO VAN SPELLEN"
-
-msgid "FIND ALL GAMES WITH NETPLAY/ACHIEVEMENTS"
-msgstr ""
-
-msgid "DATA MANAGEMENT"
+msgid "OPTIMIZE VIDEO VRAM USE"
 msgstr ""
 
 msgid "ENABLE FILTERS"
-msgstr "SCHAKEL FILTERS IN"
+msgstr ""
 
 msgid "SAVE METADATA ON EXIT"
-msgstr "SLA METADATA OP BIJ AFSLUITEN"
+msgstr ""
 
 msgid "PARSE GAMESLISTS ONLY"
-msgstr "ANALYSEER ALLEEN SPELLIJSTEN"
+msgstr ""
 
 msgid "SEARCH FOR LOCAL ART"
-msgstr "ZOEK NAAR LOKALE ARTWORK"
-
-msgid "UI"
 msgstr ""
-
-msgid "CAROUSEL TRANSITIONS"
-msgstr "DRAAIMOLEN OVERGANGEN"
-
-msgid "QUICK SYSTEM SELECT"
-msgstr "SNELLE SYSTEEMKEUZE"
-
-msgid "ON SCREEN KEYBOARD"
-msgstr "ON-SCREEN TOETSENBORD"
-
-msgid "HIDE WHEN RUNNING A GAME"
-msgstr "VERBERG BIJ STARTEN SPEL"
-
-msgid "COMPLETE QUIT MENU"
-msgstr "VERLAAT GEHEEL MENU"
 
 msgid "USE RETROARCH RGUI MENU"
-msgstr "GEBRUIK RETROARCH RGUI MENU"
-
-msgid "SWITCH A/B BUTTONS IN EMULATIONSTATION"
 msgstr ""
 
-msgid "AUTOCONFIGURE EMULATORS CONTROLLERS"
-msgstr "CONFIGUREER CONTROLLERS VOOR EMULATORS AUTOMATISCH"
-
-msgid "SHOW NETWORK INDICATOR"
+msgid "LOG LEVEL"
 msgstr ""
 
-msgid "OPTIMIZATIONS"
-msgstr ""
+msgid "CREATE A SUPPORT FILE"
+msgstr "Support file maken"
 
-msgid "PRELOAD UI"
-msgstr "PRELOAD UI"
+msgid "CREATE A SUPPORT FILE ?"
+msgstr "Support file maken?"
 
-msgid "THREADED LOADING"
-msgstr "THREADED LADEN"
+msgid "FILE GENERATED SUCCESSFULLY"
+msgstr "File aangemaakt"
 
-msgid "ASYNC IMAGES LOADING"
-msgstr "ASYNCHROON AFBEELDINGEN LADEN"
-
-msgid "OPTIMIZE IMAGES VRAM USE"
-msgstr "OPTIMALISEER VRAM VOOR AFBEELDINGEN"
-
-msgid "OPTIMIZE VIDEO VRAM USE"
-msgstr "OPTIMALISEER VRAM VOOR VIDEO'S"
+msgid "FILE GENERATION FAILED"
+msgstr "Geen file aangemaakt"
 
 msgid "DOWNLOADS"
-msgstr "DOWNLOADS"
+msgstr ""
 
 msgid "THEMES"
-msgstr "THEMA'S"
+msgstr "Visuele thema's"
+
+msgid "THE BEZEL PROJECT"
+msgstr ""
 
 msgid "SOFTWARE UPDATES"
-msgstr "SOFTWARE UPDATES"
+msgstr ""
 
-msgid "CHECK FOR UPDATES"
-msgstr "CONTROLEER OP UPDATES"
-
-msgid "UPDATE TYPE"
-msgstr "UPDATE TYPE"
+msgid "AUTO UPDATES"
+msgstr "Automatisch Updates"
 
 msgid "APPLY UPDATE"
-msgstr "UPDATE TOEPASSEN"
+msgstr ""
 
 msgid "START UPDATE"
-msgstr "NU UPDATEN"
+msgstr "Nu updaten"
 
 msgid "UPDATE IS ALREADY RUNNING"
-msgstr "UPDATE REEDS GESTART"
+msgstr ""
 
 msgid "SYSTEM"
-msgstr "SYSTEEM"
+msgstr "Systeem"
 
 msgid "LANGUAGE"
-msgstr "TAAL"
-
-msgid "SELECT YOUR TIMEZONE"
-msgstr ""
-
-msgid "TIMEZONE"
-msgstr ""
-
-msgid "SHOW CLOCK IN 12-HOUR FORMAT"
-msgstr ""
+msgstr "Taal"
 
 msgid "POWER SAVER MODES"
-msgstr "ENERGIEBESPARINGSMODUS"
-
-msgid "UI MODE"
-msgstr "INTERFACEMODUS"
-
-msgid ""
-"You are changing the UI to a restricted mode:\n"
-"This will hide most menu-options to prevent changes to the system.\n"
-"To unlock and return to the full UI, enter this code:"
 msgstr ""
-"De gebruikersinterface wordt aangepast naar een beperkte modus\n"
-"Dit zal de meeste menuopties verbergen en aanpassingen aan het systeem "
-"voorkomen\n"
-"Om terug te keren naar de volledige gebruikersinterface, voer deze code in:"
-
-msgid "Do you want to proceed ?"
-msgstr "Wil je doorgaan?"
 
 msgid "KODI SETTINGS"
-msgstr "KODI INSTELLINGEN"
+msgstr "Kodi Instellingen"
 
 msgid "ENABLE KODI"
-msgstr "ACTIVEER KODI"
+msgstr "Activeer Kodi"
 
 msgid "KODI AT START"
-msgstr "START SYSTEEM MET KODI"
+msgstr "Start systeem met Kodi"
+
+msgid "START KODI WITH X"
+msgstr "Start Kodi met X toets"
 
 msgid "HARDWARE"
-msgstr "HARDWARE"
+msgstr ""
 
 msgid "BRIGHTNESS"
-msgstr "HELDERHEID"
+msgstr ""
 
 msgid "VIDEO OUTPUT"
-msgstr "VIDEOUITVOER"
+msgstr "Video-output"
 
 msgid "A REBOOT OF THE SYSTEM IS REQUIRED TO APPLY THE NEW CONFIGURATION"
 msgstr ""
-"EEN HERSTART VAN HET SYSTEEM IS NODIG OM DE NIEUWE CONFIGURATIE TE GEBRUIKEN"
+"Een herstart van het systeem is nodig om de nieuwe configuratie te gebruiken"
 
 msgid "AUDIO OUTPUT"
-msgstr "GELUIDSUITVOER"
-
-msgid "RETROACHIEVEMENTS SETTINGS"
-msgstr "RETROACHIEVEMENTS INSTELLINGEN"
-
-msgid "NETPLAY SETTINGS"
-msgstr "NETPLAY INSTELLINGEN"
-
-msgid "CHECK BIOSES BEFORE RUNNING A GAME"
 msgstr ""
 
-msgid "MULTIMEDIA KEYS"
+msgid "OVERCLOCK"
+msgstr "Overklok"
+
+msgid "STORAGE"
+msgstr ""
+
+msgid "STORAGE DEVICE"
+msgstr "Opslagmedium"
+
+msgid "BACKUP USER DATA"
+msgstr "Back-up van gebruikersgegevens"
+
+msgid "INSTALL BATOCERA ON A NEW DISK"
+msgstr "Installeer Batocera op een nieuwe disk"
+
+msgid "ADVANCED"
+msgstr "Geavanceerd"
+
+msgid "SECURITY"
+msgstr "Veiligheid"
+
+msgid "ENFORCE SECURITY"
+msgstr "Veiligheid versterken"
+
+msgid "ROOT PASSWORD"
+msgstr "Root Wachtwoord"
+
+msgid "LATENCY REDUCTION"
+msgstr ""
+
+msgid "RUN-AHEAD FRAMES"
 msgstr ""
 
 msgid "AUTO"
-msgstr "AUTO"
-
-msgid "ON"
-msgstr "AAN"
-
-msgid "OFF"
-msgstr "UIT"
-
-msgid "OVERCLOCK"
-msgstr "OVERKLOK"
-
-msgid "STORAGE"
-msgstr "OPSLAG"
-
-msgid "STORAGE DEVICE"
-msgstr "OPSLAGMEDIUM"
-
-msgid "BACKUP USER DATA"
-msgstr "BACK-UP VAN GEBRUIKERSGEGEVENS"
-
-msgid "INSTALL BATOCERA ON A NEW DISK"
-msgstr "INSTALLEER BATOCERA OP EEN NIEUWE DISK"
-
-msgid "ADVANCED"
-msgstr "GEAVANCEERD"
-
-msgid "SECURITY"
-msgstr "VEILIGHEID"
-
-msgid "ENFORCE SECURITY"
-msgstr "VEILIGHEID VERSTERKEN"
-
-msgid "ROOT PASSWORD"
-msgstr "ROOT WACHTWOORD"
-
-msgid "LATENCY REDUCTION"
-msgstr "VERTRAGINGSREDUCTIE"
-
-msgid "RUN-AHEAD FRAMES"
-msgstr "FRAMES VOORUIT BEREKENEN"
+msgstr "Automatisch"
 
 msgid "USE RUN-AHEAD FRAMES"
-msgstr "GEBRUIK FRAMES VOORUIT BEREKENEN"
+msgstr ""
 
 msgid "RUN-AHEAD USE SECOND INSTANCE"
-msgstr "GEBRUIK SECUNDAIR PROCES"
-
-msgid "HARDCORE MODE"
-msgstr "HARDCORE MODUS"
-
-msgid "LEADERBOARDS"
-msgstr "SCOREBORD"
-
-msgid "VERBOSE MODE"
-msgstr "VERBOSE MODUS"
-
-msgid "AUTOMATIC SCREENSHOT"
-msgstr "AUTOMATISCHE SCHERMAFDRUK"
-
-msgid "RETROACHIEVEMENTS UNLOCK SOUND"
 msgstr ""
 
-msgid "UNLOCK SOUND"
+msgid "ON"
+msgstr "Aan"
+
+msgid "OFF"
+msgstr "Uit"
+
+msgid "NETPLAY SETTINGS"
 msgstr ""
 
-msgid "SHOW IN MAIN MENU"
-msgstr ""
-
-msgid "GAME INDEXES"
-msgstr "SPELINDEXEN"
-
-msgid "FIND ALL GAMES"
-msgstr ""
-
-msgid "FIND NEW GAMES"
-msgstr ""
-
-msgid "UNABLE TO ACTIVATE RETROACHIEVEMENTS :"
+msgid "SETTINGS"
 msgstr ""
 
 msgid "ENABLE NETPLAY"
-msgstr "SCHAKEL NETPLAY IN"
+msgstr ""
 
 msgid "NICKNAME"
-msgstr "BIJNAAM"
+msgstr ""
 
 msgid "PORT"
-msgstr "POORT"
+msgstr ""
 
 msgid "USE RELAY SERVER"
-msgstr "GEBRUIK RELAY SERVER"
+msgstr ""
+
+msgid "GAME INDEXES"
+msgstr ""
 
 msgid "CHECK MISSING INDEXES AT STARTUP"
-msgstr "CONTROLEER ONTBREKENDE SPELINDEXEN BIJ OPSTARTEN"
+msgstr ""
+
+msgid "REINDEX ALL GAMES"
+msgstr ""
+
+msgid "INDEX MISSING GAMES"
+msgstr ""
 
 msgid "DEFAULT SETTINGS"
-msgstr "STANDAARDINSTELLINGEN"
+msgstr ""
 
 msgid "GAME RATIO"
-msgstr "SPELRATIO"
-
-msgid "VIDEO MODE"
-msgstr "VIDEOMODUS"
+msgstr "Spelratio"
 
 msgid "SMOOTH GAMES"
-msgstr "SPELLEN AFVLAKKEN"
+msgstr "Visuele weergave verbeteren"
 
 msgid "REWIND"
-msgstr "TERUGSPOELEN"
-
-msgid "INTEGER SCALE (PIXEL PERFECT)"
-msgstr "INTEGER SCHAAL (PIXEL PERFECT)"
+msgstr "Terugspoelen"
 
 msgid "AUTO SAVE/LOAD"
-msgstr "AUTOMATISCH OPSLAAN/LADEN"
-
-msgid "SHOW SAVE SNAPSHOTS"
-msgstr ""
-
-msgid "SHOW SNAPSHOTS IF NOT EMPTY"
-msgstr ""
+msgstr "Automatisch opslaan/laden"
 
 msgid "SHADERS SET"
-msgstr "SHADERS SET"
+msgstr "Shaders Set"
 
-msgid "DECORATION"
-msgstr "AANKLEDING"
+msgid "SCANLINES"
+msgstr "Scanlines"
 
-msgid "STRETCH BEZELS (4K & ULTRAWIDE)"
+msgid "RETRO"
+msgstr "Retro"
+
+msgid "ENHANCED"
 msgstr ""
 
+msgid "CURVATURE"
+msgstr ""
+
+msgid "ZFAST"
+msgstr ""
+
+msgid "FLATTEN-GLOW"
+msgstr ""
+
+msgid "INTEGER SCALE (PIXEL PERFECT)"
+msgstr "Integer schaal (Pixel perfect)"
+
+msgid "DECORATION"
+msgstr "Aankleding"
+
 msgid "AI GAME TRANSLATION"
-msgstr "AI SPELVERTALING"
+msgstr ""
 
 msgid "ENABLE AI SERVICE"
-msgstr "SCHAKEL AI DIENST IN"
+msgstr ""
 
 msgid "TARGET LANGUAGE"
-msgstr "DOELTAAL"
+msgstr ""
 
 msgid "SERVICE URL"
-msgstr "URL VAN DIENST"
+msgstr ""
 
 msgid "PAUSE ON TRANSLATED SCREEN"
-msgstr "PAUZEER BIJ VERTAALD SCHERM"
+msgstr ""
 
 msgid "PER SYSTEM ADVANCED CONFIGURATION"
-msgstr "GEAVANCEERDE CONFIGURATIE PER SYSTEEM"
+msgstr ""
+
+msgid "RETROACHIEVEMENTS SETTINGS"
+msgstr "Retroarchievements instellingen"
+
+msgid "HARDCORE MODE"
+msgstr "Hardcore mode"
+
+msgid "LEADERBOARDS"
+msgstr "Scorebord"
+
+msgid "VERBOSE MODE"
+msgstr "Feedback modus"
+
+msgid "AUTOMATIC SCREENSHOT"
+msgstr "Automatische schermafdruk"
+
+msgid "MISSING BIOS"
+msgstr "BIOS ontbreekt"
+
+msgid "NO MISSING BIOS"
+msgstr "Alle BIOSsen aanwezig"
+
+msgid "MISSING"
+msgstr ""
+
+msgid "INVALID"
+msgstr ""
+
+msgid "UPDATE GAMES LISTS"
+msgstr "Updaten spellijst"
 
 msgid "GAME HASHING IS RUNNING. DO YOU WANT TO STOP IT ?"
-msgstr "SPEL HASHEN IS BEZIG. WIL JE HET STOPPEN?"
+msgstr ""
 
 msgid "REALLY UPDATE GAMES LISTS ?"
-msgstr "SPELLIJST ECHT UPDATEN?"
+msgstr "Spellijst echt updaten?"
 
 msgid "CONFIGURE A CONTROLLER"
-msgstr "CONFIGUREER EEN CONTROLLER"
+msgstr "Configureer een controller"
 
 msgid ""
 "YOU ARE GOING TO CONFIGURE A CONTROLLER. IF YOU HAVE ONLY ONE JOYSTICK, "
@@ -1598,374 +624,708 @@ msgid ""
 "ALL BUTTONS YOU DO NOT HAVE BY HOLDING A KEY. BUTTONS NAMES ARE BASED ON THE "
 "SNES CONTROLLER."
 msgstr ""
-"JE GAAT NU EEN CONTROLLER CONFIGUREREN. ALS JE SLECHTS ÉÉN JOYSTICK HEBT, "
-"CONFIGUREER DE RICHTINGSTOETSEN EN SLA DE JOYSTICK OVER DOOR EEN KNOP "
-"INGEDRUKT TE HOUDEN. ALS JE GEEN SPECIALE SLEUTEL VOOR DE SNELTOETS HEBT, "
-"KIES JE DE SELECT KNOP. SKIP ALLE KNOPPEN DIE JE NIET HEBT DOOR EEN KNOP "
-"VAST TE HOUDEN. DE NAMEN VAN DE KNOPPEN ZIJN GEBASEERD OP DE SNES CONTROLLER."
+"Je gaat nu een controller configureren. Als je slechts één joystick hebt, "
+"configureer de richtingstoetsen en sla de joystick over door een knop "
+"ingedrukt te houden. Als je geen speciale sleutel voor de sneltoets hebt, "
+"kies je de SELECT knop. Skip alle knoppen die je niet hebt door een knop "
+"vast te houden. De namen van de knoppen zijn gebaseerd op de SNES controller."
 
 msgid "PAIR A BLUETOOTH CONTROLLER"
-msgstr "KOPPEL EEN BLUETOOTH-CONTROLLER"
+msgstr "Koppel een Bluetooth-controller"
+
+msgid "FORGET BLUETOOTH CONTROLLERS"
+msgstr "Vergeet Bluetooth-controllers"
+
+msgid "CONTROLLERS LINKS HAVE BEEN DELETED."
+msgstr "Gekoppeld controllers zijn gewist"
 
 #, c-format
 msgid "INPUT P%i"
-msgstr "INVOER P%i"
+msgstr "Ingang P%i"
 
 msgid "default"
-msgstr "standaard"
+msgstr ""
 
 msgid "SHOW CONTROLLER ACTIVITY"
-msgstr "TOON CONTROLLERACTIVITEIT"
+msgstr ""
 
 msgid "YOU MUST APPLY THE THEME BEFORE EDIT CONFIGURATION"
-msgstr "JE MOET HET THEMA TOEPASSEN VOORDAT JE DE CONFIGURATIE VERLAAT"
+msgstr ""
 
 msgid "THEME CONFIGURATION"
-msgstr "THEMACONFIGURATIE"
-
-msgid "GAMELIST STYLE"
 msgstr ""
 
 msgid "basic"
-msgstr "eenvoudig"
+msgstr ""
 
 msgid "detailed"
-msgstr "gedetaileerd"
+msgstr ""
 
 msgid "DEFAULT GRID SIZE"
-msgstr "STANDAARD RASTERGROOTTE"
+msgstr ""
+
+msgid "DEFAULT"
+msgstr ""
 
 msgid "GAMELIST THEME OPTIONS"
-msgstr "SPELLIJST THEMAOPTIES"
+msgstr ""
 
 msgid "THEME OPTIONS"
-msgstr "THEMAOPTIES"
+msgstr ""
 
-msgid "DEFAULT VALUE"
-msgstr "STANDAARDWAARDE"
+msgid "TOOLS"
+msgstr ""
 
-msgid "GAMELIST OPTIONS"
-msgstr "SPELLIJST OPTIES"
-
-msgid "SHOW FAVORITES ON TOP"
-msgstr "TOON FAVORIETEN BOVENAAN"
-
-msgid "SHOW HIDDEN FILES"
-msgstr "TOON VERBORGEN BESTANDEN"
-
-msgid "SHOW FOLDERS"
-msgstr "TOON MAPPEN"
-
-msgid "having multiple games"
-msgstr "heeft meerdere spellen"
-
-msgid "SHOW '..' PARENT FOLDER"
-msgstr "TOON '..' BOVENLIGGENDE MAP"
-
-msgid "SHOW FILENAMES IN LISTS"
-msgstr "TOON BESTANDSNAMEN IN LIJST"
-
-msgid "FILE EXTENSIONS"
-msgstr "BESTANDSEXTENSIES"
-
-msgid "RESET CUSTOMISATIONS"
+msgid "RESET GAMELIST CUSTOMISATIONS"
 msgstr ""
 
 msgid "APPEARENCE"
-msgstr "UITERLIJK"
+msgstr ""
 
 msgid "THEME SET"
-msgstr "THEMA INSTELLEN"
+msgstr "Thema instellen"
 
 msgid "video"
-msgstr "video"
+msgstr ""
 
 msgid "grid"
-msgstr "raster"
+msgstr ""
+
+msgid "UI MODE"
+msgstr "Gebruikersinterface-modus"
+
+msgid ""
+"You are changing the UI to a restricted mode:\n"
+"This will hide most menu-options to prevent changes to the system.\n"
+"To unlock and return to the full UI, enter this code:"
+msgstr ""
+
+msgid "Do you want to proceed ?"
+msgstr ""
+
+msgid "STARTUP SETTINGS"
+msgstr ""
+
+msgid "START ON SYSTEM"
+msgstr "Start op systeem"
+
+msgid "START ON GAMELIST"
+msgstr ""
+
+msgid "SYSTEMS DISPLAYED"
+msgstr ""
 
 msgid "DISPLAY OPTIONS"
-msgstr "WEERGAVEOPTIES"
+msgstr ""
 
 msgid "TRANSITION STYLE"
-msgstr "TRANSITIE STIJL"
+msgstr "Transitie stijl"
 
-msgid "GAME LAUNCH TRANSITION"
+msgid "CAROUSEL TRANSITIONS"
 msgstr ""
+
+msgid "QUICK SYSTEM SELECT"
+msgstr "Snelle systeemkeuze"
 
 msgid "SHOW CLOCK"
-msgstr "DE TIJD WEERGEVEN"
+msgstr "De tijd weergeven"
 
 msgid "ON-SCREEN HELP"
-msgstr "ON-SCREEN HULP"
+msgstr "On-screen hulp"
 
 msgid "SHOW BATTERY STATUS"
-msgstr "TOON ACCUSTATUS"
-
-msgid "ICON"
 msgstr ""
 
-msgid "ICON AND TEXT"
+msgid "ON SCREEN KEYBOARD"
+msgstr "On-screen toetsenbord"
+
+msgid "SHOW FILENAMES IN LISTS"
 msgstr ""
 
 msgid "VOLUME"
-msgstr "VOLUME"
+msgstr ""
 
 msgid "SYSTEM VOLUME"
-msgstr "SYSTEEM VOLUME"
-
-msgid "MUSIC VOLUME"
-msgstr ""
+msgstr "Systeem volume"
 
 msgid "SHOW OVERLAY WHEN VOLUME CHANGES"
-msgstr "TOON OVERLAY BIJ AANPASSEN VOLUME"
+msgstr ""
 
 msgid "MUSIC"
-msgstr "MUZIEK"
+msgstr ""
 
 msgid "FRONTEND MUSIC"
-msgstr "FRONTEND MUZIEK"
+msgstr "Frontend Muziek"
 
 msgid "DISPLAY SONG TITLES"
-msgstr "TOON MUZIEKTITELS"
+msgstr ""
 
 msgid "HOW MANY SECONDS FOR SONG TITLES"
-msgstr "WEERGAVEDUUR MUZIEKTITELS"
+msgstr ""
 
 msgid "ONLY PLAY SYSTEM-SPECIFIC MUSIC FOLDER"
-msgstr "SPEEL ALLEEN SYSTEEMSPECIFIEKE MUZIEKMAPPEN"
+msgstr ""
 
 msgid "PLAY THEME MUSICS"
-msgstr "SPEEL THEMAMUZIEK"
+msgstr ""
 
 msgid "LOWER MUSIC WHEN PLAYING VIDEO"
-msgstr "VERLAAG MUZIEKVOLUME BIJ AFSPELEN VIDEO"
+msgstr ""
 
 msgid "SOUNDS"
-msgstr "GELUIDEN"
+msgstr ""
 
 msgid "ENABLE NAVIGATION SOUNDS"
-msgstr "SCHAKEL NAVIGATIEGELUIDEN IN"
+msgstr ""
 
 msgid "ENABLE VIDEO AUDIO"
-msgstr "SCHAKEL GELUID BIJ VIDEO IN"
-
-msgid "IP ADDRESS"
-msgstr "IP ADRES"
+msgstr ""
 
 msgid "CONNECTED"
-msgstr "VERBONDEN"
+msgstr "Verbonden"
 
 msgid "NOT CONNECTED"
-msgstr "NIET VERBONDEN"
+msgstr "Niet verbonden"
 
-msgid "INTERNET STATUS"
-msgstr ""
+msgid "STATUS"
+msgstr "Status"
+
+msgid "IP ADDRESS"
+msgstr "IP Adres"
 
 msgid "HOSTNAME"
-msgstr "HOSTNAAM"
+msgstr "Host naam"
 
 msgid "ENABLE WIFI"
-msgstr "WIFI INSCHAKELEN"
+msgstr "Wifi inschakelen"
 
 msgid "WIFI SSID"
-msgstr "WIFI SSID"
+msgstr "Wifi SSID"
 
 msgid "WIFI KEY"
-msgstr "WIFI SLEUTEL"
+msgstr "Wifi sleutel"
 
 msgid "WIFI ENABLED"
-msgstr "WIFI INGESCHAKELD"
+msgstr "Wifi ingeschakeld"
 
 msgid "WIFI CONFIGURATION ERROR"
-msgstr "WIFI CONFIGURATIE FOUT"
+msgstr "Wifi configuratie fout"
 
-msgid "QUICK ACCESS"
+msgid "AUTOMATIC SCRAPER"
 msgstr ""
 
-msgid "SKIP TO NEXT SONG"
-msgstr "VOLGENDE NUMMER"
+msgid "REALLY SCRAPE?"
+msgstr ""
 
-msgid "LISTENING NOW"
+msgid "MANUAL SCRAPER"
 msgstr ""
 
 msgid "LAUNCH SCREENSAVER"
-msgstr "START SCREENSAVER"
-
-msgid "VIEW USER'S MANUAL"
-msgstr ""
-
-msgid "VIEW BATOCERA MANUAL"
 msgstr ""
 
 msgid "RESTART SYSTEM"
-msgstr "SYSTEEM HERSTARTEN"
+msgstr "Systeem herstarten"
 
 msgid "REALLY RESTART?"
-msgstr "SYSTEEM HERSTARTEN?"
+msgstr "Systeem herstarten?"
 
 msgid "SHUTDOWN SYSTEM"
-msgstr "SYSTEEM UITSCHAKELEN"
+msgstr "Systeem uitschakelen"
 
 msgid "REALLY SHUTDOWN?"
-msgstr "SYSTEEM UITSCHAKELEN?"
+msgstr "Systeem uitschakelen?"
 
 msgid "FAST SHUTDOWN SYSTEM"
-msgstr "SYSTEEM SNEL UITSCHAKELEN"
+msgstr "Snel uitschakelen systeem"
 
 msgid "REALLY SHUTDOWN WITHOUT SAVING METADATAS?"
-msgstr "UITSCHAKELEN ZONDER METADATA OP TE SLAAN?"
+msgstr "Uitschakelen zonder opslaan van Metadata?"
 
 msgid "QUIT EMULATIONSTATION"
-msgstr "STOP EMULATIONSTATION"
-
-msgid "REALLY QUIT?"
-msgstr "ECHT STOPPEN?"
-
-msgid "COLORIZATION"
-msgstr "INKLEURING"
-
-msgid "FULL BOOT"
-msgstr "VOLLEDIG STARTEN"
-
-msgid "EMULATED WIIMOTES"
-msgstr "GEËMULEERDE WIIMOTES"
-
-msgid "CHANGE SCREEN LAYOUT"
-msgstr "PAS SCHERMLAYOUT AAN"
-
-msgid "LARGE SCREEN"
-msgstr "GROOT SCHERM"
-
-msgid "SIDE BY SIDE"
-msgstr "NAAST ELKAAR"
-
-msgid "INTERNAL RESOLUTION"
-msgstr "INTERNE RESOLUTIE"
-
-msgid "AUTOCONFIGURE CONTROLLERS"
 msgstr ""
 
-msgid "FORMAT DEVICE"
-msgstr "FORMATTEER APPARAAT"
+msgid "REALLY QUIT?"
+msgstr ""
 
-msgid "DEVICE TO FORMAT"
-msgstr "APPARAAT OM TE FORMATTEREN"
+msgid "Emulator"
+msgstr "Emulator"
 
-msgid "FILE SYSTEM"
-msgstr "BESTANDSSSYTEEM"
+msgid "Core"
+msgstr "Core"
 
-msgid "FORMAT NOW"
-msgstr "FORMATTEER NU"
+msgid "VIDEO MODE"
+msgstr ""
 
-msgid "SELECTED OPTIONS ARE INVALID"
-msgstr "GESELECTEERDE OPTIES ZIJN ONGELDIG"
+msgid "COLORIZATION"
+msgstr ""
 
-msgid "ARE YOU SURE YOU WANT TO FORMAT THIS DRIVE ?"
-msgstr "WEET JE ZEKER DAT JE DEZE SCHIJF WIL FORMATTEREN ?"
+msgid "FULL BOOT"
+msgstr ""
+
+msgid "EMULATED WIIMOTES"
+msgstr ""
+
+msgid "CHANGE SCREEN LAYOUT"
+msgstr ""
+
+msgid "LARGE SCREEN"
+msgstr ""
+
+msgid "SIDE BY SIDE"
+msgstr ""
+
+msgid "INTERNAL RESOLUTION"
+msgstr ""
+
+msgid "GROUPED SYSTEMS"
+msgstr ""
+
+msgid "CREATE NEW CUSTOM COLLECTION FROM THEME"
+msgstr ""
+
+msgid "SELECT THEME FOLDER"
+msgstr ""
+
+msgid "CREATE NEW CUSTOM COLLECTION"
+msgstr ""
+
+msgid "New Collection Name"
+msgstr ""
+
+msgid "GROUP UNTHEMED CUSTOM COLLECTIONS"
+msgstr ""
+
+msgid "SORT CUSTOM COLLECTIONS AND SYSTEMS"
+msgstr ""
+
+msgid "SHOW SYSTEM NAME IN COLLECTIONS"
+msgstr ""
+
+msgid "SELECT COLLECTIONS"
+msgstr ""
+
+msgid "ARCADE SYSTEMS"
+msgstr ""
+
+msgid "AUTOMATIC GAME COLLECTIONS"
+msgstr ""
+
+msgid "CUSTOM GAME COLLECTIONS"
+msgstr ""
+
+msgid "INSTALL BATOCERA"
+msgstr ""
+
+msgid "TARGET DEVICE"
+msgstr ""
+
+msgid "TARGET ARCHITECTURE"
+msgstr ""
+
+msgid "VALIDATION"
+msgstr ""
+
+msgid "YES, I'M SURE"
+msgstr ""
+
+msgid "INSTALL"
+msgstr ""
+
+msgid "NETWORK REQUIRED"
+msgstr ""
+
+msgid "SCRAPING IN PROGRESS"
+msgstr "Bezig met scrapen"
+
+msgid "subtitle text"
+msgstr "Ondertitelings tekst"
+
+msgid "search"
+msgstr "Zoeken"
+
+msgid "SKIP"
+msgstr "Overslaan"
+
+msgid "STOP"
+msgstr "Stop"
+
+msgid "stop (progress saved)"
+msgstr "Stop (voortgang opgeslagen)"
+
+#, c-format
+msgid "GAME %i OF %i"
+msgstr "Spel %i van %i"
+
+msgid ""
+"WE CAN'T FIND ANY SYSTEMS!\n"
+"CHECK THAT YOUR PATHS ARE CORRECT IN THE SYSTEMS CONFIGURATION FILE, AND "
+"YOUR GAME DIRECTORY HAS AT LEAST ONE GAME WITH THE CORRECT EXTENSION."
+msgstr ""
+
+#, fuzzy, c-format
+msgid "%i GAME SUCCESSFULLY SCRAPED!"
+msgid_plural "%i GAMES SUCCESSFULLY SCRAPED!"
+msgstr[0] ""
+"%i Spel juist gescraped!\n"
+"%i Spellen juist gescraped!"
+msgstr[1] ""
+
+#, c-format
+msgid "%i GAME SKIPPED."
+msgid_plural "%i GAMES SKIPPED."
+msgstr[0] "%i Spel overgeslagen"
+msgstr[1] "%i Spellen overgeslagen"
+
+msgid "INSTALL BEZELS"
+msgstr ""
+
+msgid "UNINSTALL BEZELS"
+msgstr ""
+
+msgid "INSTALL THE BEZEL PROJECT"
+msgstr ""
+
+msgid "SELECT SYSTEM WHERE BEZELS WILL BE (RE)INSTALLED"
+msgstr ""
+
+#, c-format
+msgid "'%s' ADDED TO DOWNLOAD QUEUE"
+msgstr ""
+
+msgid "UNINSTALL THE BEZEL PROJECT"
+msgstr ""
+
+msgid "SELECT SYSTEM WHERE BEZELS WILL BE REMOVED"
+msgstr ""
+
+msgid "BEZELS DELETED SUCCESSFULLY"
+msgstr ""
+
+msgid "SWAP IMAGE AFTER (SECS)"
+msgstr ""
+
+msgid "SHOW GAME INFO"
+msgstr ""
+
+msgid "USE MARQUEE AS GAME INFO"
+msgstr ""
+
+msgid "DECORATIONS"
+msgstr ""
+
+msgid "STRETCH IMAGES"
+msgstr ""
+
+msgid "USE CUSTOM IMAGES"
+msgstr ""
+
+msgid "CUSTOM IMAGE DIR"
+msgstr ""
+
+msgid "CUSTOM IMAGE DIR RECURSIVE"
+msgstr ""
+
+msgid "CUSTOM IMAGE FILTER"
+msgstr ""
+
+msgid "SWAP VIDEO AFTER (SECS)"
+msgstr ""
+
+msgid "USE OMX PLAYER FOR SCREENSAVER"
+msgstr ""
+
+msgid "VIDEO SCREENSAVER"
+msgstr ""
+
+msgid "SHOW GAME INFO ON SCREENSAVER"
+msgstr ""
+
+msgid "STRETCH VIDEO ON SCREENSAVER"
+msgstr ""
+
+msgid "SCRAPE THESE GAMES"
+msgstr "Scrape deze spellen"
+
+msgid "All Games"
+msgstr "Alle spellen"
+
+msgid "Only missing medias"
+msgstr ""
+
+msgid "FILTER"
+msgstr "Filter"
+
+msgid "SCRAPE THESE SYSTEMS"
+msgstr "Scrape deze systemen"
+
+msgid "SYSTEMS"
+msgstr "Systemen"
+
+msgid "USER DECIDES ON CONFLICTS"
+msgstr "Gebruiker beslist bij conflicten"
+
+msgid "START"
+msgstr "Starten"
+
+msgid ""
+"WARNING: SOME OF YOUR SELECTED SYSTEMS DO NOT HAVE A PLATFORM SET. RESULTS "
+"MAY BE EVEN MORE INACCURATE THAN USUAL!\n"
+"CONTINUE ANYWAY?"
+msgstr ""
+"Waarschuwing: Sommige geselecteerde systemen hebben geen platform ingesteld. "
+"Resultaten kunnen minder nauwkeurig zijn dan normaal!\n"
+"Doorgaan?"
+
+msgid "NO GAMES FIT THAT CRITERIA."
+msgstr "Geen spellen gevonden met die criteria"
+
+msgid "SELECT SYSTEMS TO DISPLAY"
+msgstr ""
+
+msgid "APPLY"
+msgstr ""
+
+msgid "REVERT"
+msgstr ""
+
+msgid "VALIDATE"
+msgstr ""
+
+msgid "SCREENSAVER AFTER"
+msgstr "Schermbeveiliging na"
+
+msgid "SCREENSAVER BEHAVIOR"
+msgstr "Schermbeveiliging gedrag"
+
+msgid ""
+"THE \"RANDOM VIDEO\" SCREENSAVER SHOWS VIDEOS FROM YOUR GAMELIST.\n"
+"IF YOU DON'T HAVE VIDEOS, OR IF NONE OF THEM CAN BE PLAYED AFTER A FEW "
+"ATTEMPTS, IT WILL DEFAULT TO \"BLACK\".\n"
+"MORE OPTIONS IN THE \"UI SETTINGS\" -> \"RANDOM VIDEO SCREENSAVER SETTINGS\" "
+"MENU."
+msgstr ""
+"DE \"WILLEKEURIGE VIDEO\" SCREENSAVER TOONT VIDEO'S VAN JE GAMELIST.\n"
+"ALS JE GEEN VIDEO'S HEBT, OF ALS GEEN VAN DE VIDEO'S NA EEN PAAR POGINGEN "
+"KAN WORDEN AFGESPEELD, ZAL HET STANDAARD OP \"BLACK\" STAAN.\n"
+"MEER OPTIES IN DE \"GEBRUIKERSINTERFACE-INSTELLINGEN\" -> \"WILLEKEURIGE "
+"VIDEO SCREENSAVER INSTELLINGEN\" MENU."
+
+msgid "RANDOM VIDEO SCREENSAVER SETTINGS"
+msgstr "WILLEKEURIGE VIDEO SCREENSAVER INSTELLINGEN"
+
+msgid "SLIDESHOW SCREENSAVER SETTINGS"
+msgstr "SLIDESHOW SCREENSAVER INSTELLINGEN"
+
+msgid "SCREENSAVER CONTROLS"
+msgstr ""
+
+msgid "SLIDESHOW SCREENSAVER"
+msgstr ""
+
+msgid "NO DEVICE FOUND"
+msgstr ""
+
+msgid "SELECT THEME"
+msgstr ""
 
 msgid "EDIT METADATA"
-msgstr "WIJZIGEN METADATA"
+msgstr "Wijzigen metadata"
+
+msgid "SAVE"
+msgstr "Opslaan"
 
 msgid ""
 "THIS WILL DELETE THE ACTUAL GAME FILE(S)!\n"
 "ARE YOU SURE?"
 msgstr ""
-"DID ZAL DE DAADWERKELIJKE SPELBESTANDEN VERWIJDEREN!\n"
-"WEET JE HET ZEKER?"
 
-msgid "NO DEVICE FOUND"
-msgstr "GEEN APPARAAT GEVONDEN"
+msgid "DELETE"
+msgstr "Wissen"
 
-msgid "ZOOM-"
+msgid "SAVE CHANGES?"
+msgstr "Wijzigingen opslaan?"
+
+msgid "Name"
+msgstr "Naam"
+
+msgid "enter game name"
+msgstr "Wijzig spel naam"
+
+msgid "Description"
+msgstr "Beschrijving"
+
+msgid "enter description"
+msgstr "Voeg beschrijving toe"
+
+msgid "Image"
+msgstr "Beeld"
+
+msgid "enter path to image"
+msgstr "Toets pad naar afbeelding"
+
+msgid "Path to video"
 msgstr ""
 
-msgid "ZOOM+"
+msgid "enter path to thumbnail"
+msgstr "Toets pad naar beeld"
+
+msgid "Path to marquee"
 msgstr ""
 
-msgid "MOVE"
+msgid "Thumbnail"
+msgstr "Thumbnail"
+
+msgid "Rating"
+msgstr "Beoordeling"
+
+msgid "enter rating"
+msgstr "Toets beoordeling"
+
+msgid "Release date"
+msgstr "Datum publicatie"
+
+msgid "enter release date"
+msgstr "Wijzig publicatie datum"
+
+msgid "Developer"
+msgstr "Ontwikkelaar"
+
+msgid "enter game developer"
+msgstr "Wijzig spel ontwikkelaar"
+
+msgid "Publisher"
+msgstr "Uitgever"
+
+msgid "enter game publisher"
+msgstr "Wijzig spel uitgever"
+
+msgid "Genre"
+msgstr "Genre"
+
+msgid "enter game genre"
+msgstr "Wijzig spel genre"
+
+msgid "Players"
+msgstr "Spelers"
+
+msgid "enter number of players"
+msgstr "Wijzig nummer van spelers"
+
+msgid "Favorite"
+msgstr "Favoriet"
+
+msgid "enter favorite"
+msgstr "Wijzig favoriet"
+
+msgid "Hidden"
+msgstr "Verborgen"
+
+msgid "set hidden"
+msgstr "Maak verborgen"
+
+msgid "Kidgame"
 msgstr ""
 
-msgid "ZOOM"
+msgid "set kidgame"
 msgstr ""
 
-msgid "SYSTEM INFO"
+msgid "Play count"
+msgstr "Speel teller"
+
+msgid "enter number of times played"
+msgstr "Wijzig aantal malen gespeeld"
+
+msgid "Last played"
+msgstr "Laatst gespeeld"
+
+msgid "enter last played date"
+msgstr "Wijzig laatst gespeelde datum"
+
+msgid "Crc32 checksum"
 msgstr ""
 
-msgid "ERROR: EVERY SYSTEM IS HIDDEN, RE-DISPLAYING ALL OF THEM NOW"
-msgstr "FOUT: ALLE SYSTEMEN ZIJN VERBORGEN, ALLE SYSTEMEN WORDEN NU GETOOND"
-
-msgid "QUICK SEARCH"
+msgid "Md5 checksum"
 msgstr ""
 
-msgid "GO TO LETTER"
+msgid "Game time"
 msgstr ""
 
-msgid "GO TO MANUFACTURER"
+msgid "how long the game has been played in total (seconds)"
 msgstr ""
 
-msgid "GO TO HARDWARE"
+msgid "Arcade system"
 msgstr ""
 
-msgid "GO TO DECADE"
+msgid "enter game arcade system"
 msgstr ""
 
-msgid "CONFIGURATION"
+msgid "name"
 msgstr ""
 
-#, c-format
-msgid "%i COLLECTION"
-msgid_plural "%i COLLECTIONS"
-msgstr[0] "%i VERZAMELING"
-msgstr[1] "%i VERZAMELINGEN"
+msgid "description"
+msgstr ""
 
-#, c-format
-msgid "%i ITEM"
-msgid_plural "%i ITEMS"
-msgstr[0] "%i ARTIKEL"
-msgstr[1] "%i ARTIKELEN"
+msgid "image"
+msgstr ""
 
-#, c-format
-msgid "%i GAME"
-msgid_plural "%i GAMES"
-msgstr[0] "%i SPEL"
-msgstr[1] "%i SPELLEN"
+msgid "thumbnail"
+msgstr ""
+
+msgid "enter path to video"
+msgstr ""
+
+msgid "marquee"
+msgstr ""
+
+msgid "enter path to marquee"
+msgstr ""
+
+msgid "SCRAPING"
+msgstr ""
+
+msgid "Searching"
+msgstr ""
+
+msgid "SCRAPE FAILED"
+msgstr ""
+
+msgid "Downloading"
+msgstr ""
+
+msgid "SCRAPING FINISHED. REFRESH UPDATE GAMES LISTS TO APPLY CHANGES."
+msgstr ""
+
+msgid "DO YOU WANT TO START KODI MEDIA CENTER ?"
+msgstr "Wil je Kodi Media Center starten?"
+
+#, fuzzy, c-format
+msgid "%i GAME AVAILABLE"
+msgid_plural "%i GAMES AVAILABLE"
+msgstr[0] ""
+"%i Spel beschikbaar\n"
+"%i Spellen beschikbaar"
+msgstr[1] ""
+
+msgid "KODI"
+msgstr ""
+
+msgid "NETPLAY"
+msgstr ""
 
 msgid "RANDOM"
-msgstr "WILLEKEURIG"
+msgstr ""
 
 msgid "FILES"
-msgstr "BESTANDEN"
-
-msgid ""
-"WARNING : THIS GAME'S FORMAT IS NOT SUPPORTED BY THE CURRENT EMULATOR/CORE.\n"
-"DO YOU WANT TO LAUNCH IT ANYWAY ?"
 msgstr ""
-
-msgid ""
-"WARNING : THE SYSTEM HAS MISSING BIOS AND THE GAME MAY NOT WORK CORRECTLY.\n"
-"DO YOU WANT TO LAUNCH IT ANYWAY ?"
-msgstr ""
-
-msgid "Preloading UI"
-msgstr "Voorladen UI"
-
-msgid "Loading theme"
-msgstr ""
-
-msgid "Loading gamelists"
-msgstr ""
-
-msgid "MENU"
-msgstr "MENU"
 
 msgid "Full"
-msgstr "Volledig"
+msgstr ""
 
 msgid "Kiosk"
-msgstr "Kiosk"
+msgstr ""
 
 msgid "Kid"
-msgstr "Kinderen"
+msgstr ""
 
 msgid "Released"
 msgstr "Uitgebracht"
@@ -1974,594 +1334,364 @@ msgid "Times played"
 msgstr "Keren gespeeld"
 
 msgid "No Entries Found"
-msgstr "Geen ingangen gevonden"
-
-msgid "FAVORITE"
 msgstr ""
 
-msgid "Games similar to"
+msgid "OPTIONS"
+msgstr "Opties"
+
+msgid "Favorites"
 msgstr ""
 
-msgid ""
-"A valid account is required. Please register an account on https://"
-"retroachievements.org"
+msgid "LAUNCH THE GAME AS NETPLAY HOST ?"
 msgstr ""
 
-msgid "Searching"
-msgstr "Zoeken"
+msgid "Preloading UI"
+msgstr ""
 
-msgid "NO GAMES FOUND - SKIP"
-msgstr "GEEN SPELLEN GEVONDEN - OVERSLAAN"
-
-msgid "RETRY"
-msgstr "OPNIEUW"
-
-msgid "SKIP"
-msgstr "OVERSLAAN"
-
-msgid "Downloading"
-msgstr "Bezig met downloaden"
-
-msgid "ACCEPT RESULT"
-msgstr "ACCEPTEER RESULTAAT"
-
-msgid "Loading system config..."
-msgstr "Laden van systeemconfiguratie..."
-
-msgid "Done."
-msgstr "Gereed."
-
-msgid "SAVING METADATAS. PLEASE WAIT..."
-msgstr "OPSLAAN VAN METADATA. WACHTEN AUB..."
-
-msgid "Collections"
-msgstr "Verzamelingen"
+msgid "MENU"
+msgstr "Menu"
 
 msgid "FILENAME, ASCENDING"
-msgstr "BESTANDSNAAM, OPLOPEND"
+msgstr "Bestandsnaam, Boven"
 
 msgid "FILENAME, DESCENDING"
-msgstr "BESTANDSNAAM, AFLOPEND"
+msgstr "Bestandsnaam, Beneden"
 
 msgid "RATING, ASCENDING"
-msgstr "BEOORDELING, OPLOPEND"
+msgstr "Beoordeling, Boven"
 
 msgid "RATING, DESCENDING"
-msgstr "BEOORDELING, AFLOPEND"
+msgstr "Beoordeling, Beneden"
 
 msgid "TIMES PLAYED, ASCENDING"
-msgstr "AANTAL MALEN GESPEELD, OPLOPEND"
+msgstr "Aantal malen gespeeld, Boven"
 
 msgid "TIMES PLAYED, DESCENDING"
-msgstr "AANTAL MALEN GESPEELD, AFLOPEND"
+msgstr "Aantal malen gespeeld, Beneden"
 
 msgid "LAST PLAYED, ASCENDING"
-msgstr "LAATST GESPEELD, OPLOPEND"
+msgstr "Laatst gespeeld, Boven"
 
 msgid "LAST PLAYED, DESCENDING"
-msgstr "LAATST GESPEELD, AFLOPEND"
+msgstr "Laatst gespeeld, Beneden"
 
 msgid "NUMBER PLAYERS, ASCENDING"
-msgstr "AANTAL SPELERS, OPLOPEND"
+msgstr ""
 
 msgid "NUMBER PLAYERS, DESCENDING"
-msgstr "AANTAL SPELERS, AFLOPEND"
+msgstr ""
 
 msgid "RELEASE DATE, ASCENDING"
-msgstr "DATUM VAN UITGAVE, OPLOPEND"
+msgstr ""
 
 msgid "RELEASE DATE, DESCENDING"
-msgstr "DATUM VAN UITGAVE, AFLOPEND"
+msgstr ""
 
 msgid "GENRE, ASCENDING"
-msgstr "GENRE, OPLOPEND"
+msgstr ""
 
 msgid "GENRE, DESCENDING"
-msgstr "GENRE, AFLOPEND"
+msgstr ""
 
 msgid "DEVELOPER, ASCENDING"
-msgstr "ONTWIKKELAAR, OPLOPEND"
+msgstr ""
 
 msgid "DEVELOPER, DESCENDING"
-msgstr "ONTWIKKELAAR, AFLOPEND"
+msgstr ""
 
 msgid "PUBLISHER, ASCENDING"
-msgstr "UITGEVER, OPLOPEND"
+msgstr ""
 
 msgid "PUBLISHER, DESCENDING"
-msgstr "UITGEVER, AFLOPEND"
+msgstr ""
 
 msgid "SYSTEM, ASCENDING"
-msgstr "SYSTEEM, OPLOPEND"
+msgstr ""
 
 msgid "SYSTEM, DESCENDING"
-msgstr "SYSTEEM, AFLOPEND"
+msgstr ""
 
 msgid "FILE CREATION DATE, ASCENDING"
-msgstr "BESTANDSAANMAAKDATUM, OPLOPEND"
+msgstr ""
 
 msgid "FILE CREATION DATE, DESCENDING"
-msgstr "BESTANDSAANMAAKDATUM, AFLOPEND"
-
-msgid "GAME TIME, ASCENDING"
 msgstr ""
 
-msgid "GAME TIME, DESCENDING"
+msgid "DOWNLOADING"
 msgstr ""
 
-msgid "SYSTEM, RELEASE YEAR, ASCENDING"
+msgid "THEME INSTALLED SUCCESSFULLY"
 msgstr ""
 
-msgid "SYSTEM, RELEASE YEAR, DESCENDING"
+msgid "BEZELS INSTALLED SUCCESSFULLY"
 msgstr ""
 
-msgid "RELEASE YEAR, SYSTEM, ASCENDING"
-msgstr ""
-
-msgid "RELEASE YEAR, SYSTEM, DESCENDING"
-msgstr ""
-
-msgid "Extracting"
-msgstr "Uitpakken"
-
-msgid "SEARCHING RETROACHIEVEMENTS"
-msgstr ""
-
-msgid "SEARCHING NETPLAY GAMES"
-msgstr ""
-
-msgid "INDEXING COMPLETED"
-msgstr ""
-
-msgid "UPDATE GAMES LISTS TO APPLY CHANGES."
+msgid "FAVORITES"
 msgstr ""
 
 msgid "GENRE"
-msgstr "GENRE"
+msgstr ""
 
 msgid "PLAYERS"
-msgstr "SPELERS"
+msgstr ""
 
 msgid "PUBLISHER / DEVELOPER"
-msgstr "UITGEVER / ONTWIKKELAAR"
+msgstr ""
 
 msgid "RATING"
-msgstr "WAARDERING"
-
-msgid "YEAR"
 msgstr ""
-
-msgid "REGION"
-msgstr "REGIO"
 
 msgid "KIDGAME"
-msgstr "SPEL VOOR KINDEREN"
-
-msgid "ALREADY PLAYED"
-msgstr "REEDS GESPEELD"
-
-msgid "HAS ACHIEVEMENTS"
 msgstr ""
 
-msgid "VERTICAL"
+msgid "HASHING GAMES"
 msgstr ""
 
-msgid "SCRAPING"
-msgstr "SCRAPEN"
+msgid "NO GAMES FOUND - SKIP"
+msgstr "Geen spellen gevonden - Overslaan"
 
-msgid "SCRAPE FAILED"
-msgstr "SCRAPEN MISLUKT"
+msgid "AN ERROR HAS OCCURED"
+msgstr ""
 
-msgid "SCRAPING FINISHED"
+msgid "RETRY"
+msgstr "Opnieuw"
+
+msgid "ACCEPT RESULT"
+msgstr ""
+
+msgid "Loading system config..."
+msgstr ""
+
+msgid "Done."
+msgstr ""
+
+msgid "SAVING METADATAS. PLEASE WAIT..."
+msgstr ""
+
+msgid "SCANNING BLUETOOTH"
+msgstr ""
+
+msgid "Searching controllers..."
+msgstr ""
+
+msgid "BLUETOOTH SCANNING IS ALREADY RUNNING."
+msgstr ""
+
+msgid "UPDATE AVAILABLE"
+msgstr ""
+
+msgid "all games"
+msgstr ""
+
+msgid "last played"
+msgstr ""
+
+msgid "favorites"
+msgstr ""
+
+msgid "2 players"
+msgstr ""
+
+msgid "4 players"
+msgstr ""
+
+msgid "never played"
+msgstr ""
+
+msgid "arcade"
+msgstr ""
+
+msgid "collections"
 msgstr ""
 
 #, c-format
-msgid "%s connected"
+msgid "Editing the '%s' Collection. Add/remove games with Y."
 msgstr ""
 
 #, c-format
-msgid "%s disconnected"
+msgid "Finished editing the '%s' Collection."
 msgstr ""
 
-msgid "SHIFTS FOR UPPER,LOWER, AND SPECIAL"
-msgstr "WISSELT NORMAAL, HOOFDLETTER EN SPECIAAL"
-
-msgid "ALT GR"
+#, c-format
+msgid "Added '%s' to '%s'"
 msgstr ""
 
-msgid "SHIFT"
-msgstr "SHIFT"
+#, c-format
+msgid "Removed '%s' from '%s'"
+msgstr ""
 
-msgid "SPACE"
-msgstr "SPATIE"
+msgid "This collection is empty."
+msgstr ""
+
+#. TRANSLATION: number of developpers / various developpers
+msgid "None"
+msgstr ""
+
+msgid "Various"
+msgstr ""
+
+#, c-format
+msgid "This collection contains %1$i game, including %2$s."
+msgid_plural "This collection contains %1$i games, including %2$s."
+msgstr[0] ""
+msgstr[1] ""
+
+#, c-format
+msgid "This collection contains %1$i game, including %2$s among other titles."
+msgid_plural ""
+"This collection contains %1$i games, including %2$s among other titles."
+msgstr[0] ""
+msgstr[1] ""
 
 msgid "UP"
-msgstr "OMHOOG"
+msgstr "Omhoog"
 
 msgid "DOWN"
-msgstr "BENEDEN"
+msgstr "Beneden"
 
 msgid "LEFT"
-msgstr "LINKS"
+msgstr "Links"
 
 msgid "RIGHT"
-msgstr "RECHTS"
+msgstr "Rechts"
 
 msgid "LEFT ANALOG UP"
-msgstr "LINKER ANALOOG OMHOOG"
-
-msgid "LEFT ANALOG DOWN"
 msgstr ""
 
 msgid "LEFT ANALOG LEFT"
-msgstr "LINKER ANALOOG LINKS"
-
-msgid "LEFT ANALOG RIGHT"
 msgstr ""
 
 msgid "RIGHT ANALOG UP"
-msgstr "RECHTER ANALOOG OMHOOG"
-
-msgid "RIGHT ANALOG DOWN"
 msgstr ""
 
 msgid "RIGHT ANALOG LEFT"
-msgstr "RECHTER ANALOOG LINKS"
-
-msgid "RIGHT ANALOG RIGHT"
 msgstr ""
 
 msgid "HOTKEY"
-msgstr "HOTKEY"
+msgstr "Hotkey"
 
 msgid "CONFIGURING"
-msgstr "CONFIGUREREN"
+msgstr "Configureren"
 
 msgid "KEYBOARD"
-msgstr "TOETSENBORD"
+msgstr "Toetsenbord"
 
 msgid "CEC"
-msgstr "CEC"
+msgstr ""
 
-#, c-format
+#, fuzzy, c-format
 msgid "GAMEPAD %i"
-msgstr "CONTROLLER %i"
+msgstr "Controller"
 
 msgid "HOLD ANY BUTTON TO SKIP"
-msgstr "DRUK WILLEKEURIGE TOETS VOOR OVERSLAAN"
+msgstr "Druk willekeurige toets voor overslaan"
 
 msgid "-NOT DEFINED-"
-msgstr "-NIET GEDEFINEERD-"
+msgstr "-Niet ge"
 
 msgid ""
 "YOU DIDN'T CHOOSE A HOTKEY ENABLE BUTTON. THIS IS REQUIRED FOR EXITING GAMES "
 "WITH A CONTROLLER. DO YOU WANT TO USE THE SELECT BUTTON DEFAULT ? PLEASE "
 "ANSWER YES TO USE SELECT OR NO TO NOT SET A HOTKEY ENABLE BUTTON."
 msgstr ""
-"ER IS GEEN HOTKEY-KNOP GEKOZEN. DEZE IS BENODIGD OM SPELLEN TE STOPPEN DOOR "
-"MIDDEL VAN DE CONTROLLER. WIL JE DE STANDAARD SELECT BUTTON GEBRUIKEN? "
-"SELECTEER JA OM DE SELECT KNOP TE GEBRUIKEN, OF NEE OM DEZE NIET IN TE "
-"STELLEN."
 
-#, c-format
+#, fuzzy, c-format
 msgid "HOLD FOR %iS TO SKIP"
 msgid_plural "HOLD FOR %iS TO SKIP"
-msgstr[0] "HOUD %iS INGEDRUKT OM OVER TE SLAAN"
-msgstr[1] "HOUD %iS INGEDRUKT OM OVER TE SLAAN"
+msgstr[0] ""
+"Houdt voor %i om over te slaan\n"
+"Houdt voor %i om over te slaan"
+msgstr[1] ""
+"Houdt voor %i om over te slaan\n"
+"Houdt voor %i om over te slaan "
 
 msgid "PRESS ANYTHING"
-msgstr "DRUK EEN KNOP"
+msgstr "Druk willekeurig"
 
 msgid "ALREADY TAKEN"
-msgstr "IN GEBRUIK"
+msgstr "In gebruik"
 
-msgid "WELCOME"
-msgstr "WELKOM"
+msgid "SPACE"
+msgstr ""
 
-#, c-format
-msgid "%i GAMEPAD DETECTED"
-msgid_plural "%i GAMEPADS DETECTED"
-msgstr[0] "%i CONTROLLER GEVONDEN"
-msgstr[1] "%i CONTROLLERS GEVONDEN"
+msgid "DELETE A CHAR"
+msgstr ""
 
-msgid "NO GAMEPADS DETECTED"
-msgstr "GEEN CONTROLLERS GEVONDEN"
-
-msgid "HOLD A BUTTON ON YOUR DEVICE TO CONFIGURE IT."
-msgstr "HOUDT A KNOP INGEDRUKT OP JE APPARAAT OM TE CONFIGUREREN."
+msgid "RESET"
+msgstr ""
 
 msgid "DISCARD CHANGES"
-msgstr "VERWIJDER WIJZIGINGEN"
+msgstr "Verwijder wijzigingen"
 
-msgid "up/down"
-msgstr "omhoog/omlaag"
+msgid "SHIFTS FOR UPPER,LOWER, AND SPECIAL"
+msgstr ""
 
-msgid "accept"
-msgstr "accepteer"
+msgid "SHIFT"
+msgstr ""
 
-msgid "SELECT ALL"
-msgstr "SELECTEER ALLES"
+msgid "WELCOME"
+msgstr "Welkom"
 
-msgid "select all"
-msgstr "selecteer alles"
+msgid "CONFIGURE INPUT"
+msgstr "Configureer invoer"
 
-msgid "SELECT NONE"
-msgstr "SELECTEER GEEN"
+#, fuzzy, c-format
+msgid "%i GAMEPAD DETECTED"
+msgid_plural "%i GAMEPADS DETECTED"
+msgstr[0] ""
+"%i Controller gevonden\n"
+"%i Controllers gevonden"
+msgstr[1] ""
 
-msgid "select none"
-msgstr "selecteer geen"
+msgid "NO GAMEPADS DETECTED"
+msgstr "Geen controllers gevonden"
 
-#, c-format
-msgid "%i SELECTED"
-msgid_plural "%i SELECTED"
-msgstr[0] "%i GESELECTEERD"
-msgstr[1] "%i GESELECTEERD"
+msgid "HOLD A BUTTON ON YOUR DEVICE TO CONFIGURE IT."
+msgstr "Houdt A knop ingedrukt op je apparaat om te configureren"
 
-msgid "CHANGE"
-msgstr "WIJZIG"
+msgid "Unknown"
+msgstr ""
 
 msgid "MOVE CURSOR"
-msgstr "VERPLAATS CURSOR"
+msgstr ""
+
+msgid "STOP EDITING"
+msgstr ""
 
 msgid "EDIT"
-msgstr "BEWERK"
+msgstr ""
 
-#, c-format
-msgid "%d day ago"
-msgid_plural "%d days ago"
-msgstr[0] "%d dag geleden"
-msgstr[1] "%d dagen geleden"
+msgid "accept"
+msgstr ""
 
-#, c-format
-msgid "%d hour ago"
-msgid_plural "%d hours ago"
-msgstr[0] "%d uur geleden"
-msgstr[1] "%d uren geleden"
+msgid "SELECT ALL"
+msgstr "Selecteer alles"
 
-#, c-format
-msgid "%d minute ago"
-msgid_plural "%d minutes ago"
-msgstr[0] "%d minuut geleden"
-msgstr[1] "%d minuten geleden"
+msgid "select all"
+msgstr ""
 
-#, c-format
-msgid "%d second ago"
-msgid_plural "%d seconds ago"
-msgstr[0] "%d seconde geleden"
-msgstr[1] "%d secondes geleden"
+msgid "SELECT NONE"
+msgstr "Selecteer niks"
+
+msgid "select none"
+msgstr ""
+
+#, fuzzy, c-format
+msgid "%i SELECTED"
+msgid_plural "%i SELECTED"
+msgstr[0] ""
+"%i geselecteerd\n"
+"%i geselecteerd"
+msgstr[1] ""
+
+msgid "CHANGE"
+msgstr "Wijzig"
 
 msgid "WORKING..."
-msgstr "BEZIG..."
+msgstr "Bezig"
 
-#, c-format
-msgid "%d h"
+msgid "up/down"
 msgstr ""
-
-#, c-format
-msgid "%d m"
-msgstr ""
-
-#, c-format
-msgid "%d s"
-msgstr ""
-
-#~ msgid "RESET GAMELIST CUSTOMISATIONS"
-#~ msgstr "HERSTEL SPELLIJST AANPASSINGEN"
-
-#~ msgid "SCRAPING IN PROGRESS"
-#~ msgstr "BEZIG MET SCRAPEN"
-
-#~ msgid "subtitle text"
-#~ msgstr "ondertitelings tekst"
-
-#~ msgid "search"
-#~ msgstr "zoeken"
-
-#~ msgid "STOP"
-#~ msgstr "STOP"
-
-#~ msgid "stop (progress saved)"
-#~ msgstr "stop (voortgang opgeslagen)"
-
-#~ msgid "GAME %i OF %i"
-#~ msgstr "SPEL %i van %i"
-
-#~ msgid ""
-#~ "WE CAN'T FIND ANY SYSTEMS!\n"
-#~ "CHECK THAT YOUR PATHS ARE CORRECT IN THE SYSTEMS CONFIGURATION FILE, AND "
-#~ "YOUR GAME DIRECTORY HAS AT LEAST ONE GAME WITH THE CORRECT EXTENSION."
-#~ msgstr ""
-#~ "WE KUNNEN GEEN SYSTEMEN VINDEN!\n"
-#~ "CONTROLEER DAT JE PADEN CORRECT ZIJN INGEVOERD IN THE SYSTEEM "
-#~ "CONFIGURATIE FILE, EN DAT JE SPELMAP MINIMAAL 1 SPEL HEEFT MET DE JUISTE "
-#~ "EXTENSIE."
-
-#~ msgid "%i GAME SUCCESSFULLY SCRAPED!"
-#~ msgid_plural "%i GAMES SUCCESSFULLY SCRAPED!"
-#~ msgstr[0] "%i SPEL SUCCESVOL GESCRAPED!"
-#~ msgstr[1] "%i SPEL SUCCESVOL GESCRAPED!"
-
-#~ msgid "%i GAME SKIPPED."
-#~ msgid_plural "%i GAMES SKIPPED."
-#~ msgstr[0] "%i SPEL OVERGESLAGEN."
-#~ msgstr[1] "%i SPELLEN OVERGESLAGEN."
-
-#~ msgid "AUTOMATIC SCRAPER"
-#~ msgstr "AUTOMATISCHE SCRAPER"
-
-#~ msgid "REALLY SCRAPE?"
-#~ msgstr "ECHT SCRAPEN?"
-
-#~ msgid "MANUAL SCRAPER"
-#~ msgstr "HANDMATIGE SCRAPER"
-
-#~ msgid "Favorites"
-#~ msgstr "Favorieten"
-
-#~ msgid "AN ERROR HAS OCCURED"
-#~ msgstr "EEN FOUT IS OPGETREDEN"
-
-#~ msgid "USER DECIDES ON CONFLICTS"
-#~ msgstr "GEBRUIKER BESLIST BIJ CONFLICTEN"
-
-#~ msgid "SCRAPING FINISHED. REFRESH UPDATE GAMES LISTS TO APPLY CHANGES."
-#~ msgstr "SCRAPEN VOLTOOID. VERVERS SPELLIJST OM WIJZIGINGEN TOE TE PASSEN."
-
-#~ msgid "Editing the '%s' Collection. Add/remove games with Y."
-#~ msgstr "Bewerken van de verzameling '%s'. Voeg toe/verwijder spellen met Y."
-
-#~ msgid "Finished editing the '%s' Collection."
-#~ msgstr "Bewerken van de verzameling '%s' voltooid."
-
-#~ msgid "FINISH EDITING COLLECTION"
-#~ msgstr "VOLTOOI BEWERKEN VERZAMELING"
-
-#~ msgid "JUMP TO..."
-#~ msgstr "SPRING NAAR..."
-
-#~ msgid "COLLECTION MANAGEMENT"
-#~ msgstr "VERZAMELINGBEHEER"
-
-#~ msgid "ADD/REMOVE GAMES TO THIS GAME COLLECTION"
-#~ msgstr "VOEG SPELLEN TOE AAN/VERWIJDER SPELLEN UIT DEZE VERZAMELING"
-
-#~ msgid "REINDEX ALL GAMES"
-#~ msgstr "HERINDEXEER ALLE SPELLEN"
-
-#~ msgid "INDEX MISSING GAMES"
-#~ msgstr "INDEXEER ONTBREKENDE SPELLEN"
-
-#~ msgid "HASHING GAMES"
-#~ msgstr "BEZIG MET GENEREREN SPELHASHES"
-
-#~ msgid "START KODI WITH X"
-#~ msgstr "START KODI MET X TOETS"
-
-#~ msgid "DO YOU WANT TO START KODI MEDIA CENTER ?"
-#~ msgstr "WIL JE KODI MEDIA CENTER STARTEN?"
-
-#~ msgid "KODI"
-#~ msgstr "KODI"
-
-#~ msgid "STATUS"
-#~ msgstr "STATUS"
-
-#~ msgid "DELETE A CHAR"
-#~ msgstr "VERWIJDER EEN KARAKTER"
-
-#~ msgid ""
-#~ "THE \"RANDOM VIDEO\" SCREENSAVER SHOWS VIDEOS FROM YOUR GAMELIST.\n"
-#~ "IF YOU DON'T HAVE VIDEOS, OR IF NONE OF THEM CAN BE PLAYED AFTER A FEW "
-#~ "ATTEMPTS, IT WILL DEFAULT TO \"BLACK\".\n"
-#~ "MORE OPTIONS IN THE \"UI SETTINGS\" -> \"RANDOM VIDEO SCREENSAVER SETTINGS"
-#~ "\" MENU."
-#~ msgstr ""
-#~ "DE \"WILLEKEURIGE VIDEO\" SCREENSAVER TOONT VIDEO'S VAN JE GAMELIST.\n"
-#~ "ALS JE GEEN VIDEO'S HEBT, OF ALS GEEN VAN DE VIDEO'S NA EEN PAAR POGINGEN "
-#~ "KAN WORDEN AFGESPEELD, ZAL HET STANDAARD OP \"BLACK\" STAAN.\n"
-#~ "MEER OPTIES IN DE \"INTERFACEINSTELLINGEN\" -> \"WILLEKEURIGE VIDEO "
-#~ "SCREENSAVER INSTELLINGEN\" MENU."
-
-#~ msgid "VIDEO SCREENSAVER"
-#~ msgstr "VIDEO SCHERMBEVEILIGING"
-
-#~ msgid "SLIDESHOW SCREENSAVER"
-#~ msgstr "DIAVOORSTELLING SCREENSAVER"
-
-#~ msgid "SLIDESHOW SETTINGS"
-#~ msgstr "SLIDESHOWINSTELLINGEN"
-
-#~ msgid "RANDOM VIDEO SETTINGS"
-#~ msgstr "WILLEKEURIGE VIDEO-INSTELLINGEN"
-
-#~ msgid "MISSING"
-#~ msgstr "ONTBREKEND"
-
-#~ msgid "INVALID"
-#~ msgstr "ONGELDIG"
-
-#~ msgid "STARTUP SETTINGS"
-#~ msgstr "OPSTARTINSTELLINGEN"
-
-#~ msgid "LAUNCH THE GAME AS NETPLAY HOST ?"
-#~ msgstr "START HET SPEL ALS NETPLAY HOST ?"
-
-#~ msgid "%d hour"
-#~ msgid_plural "%d hours"
-#~ msgstr[0] "%d uur"
-#~ msgstr[1] "%d uren"
-
-#~ msgid "%d minute"
-#~ msgid_plural "%d minutes"
-#~ msgstr[0] "%d minuut"
-#~ msgstr[1] "%d minuten"
-
-#~ msgid "%d second"
-#~ msgid_plural "%d seconds"
-#~ msgstr[0] "%d seconde"
-#~ msgstr[1] "%d secondes"
-
-#~ msgid "SELECT THEME"
-#~ msgstr "SELECTEER THEMA"
-
-#~ msgid "INSTALL BEZELS"
-#~ msgstr "INSTALLEER BEZELS"
-
-#~ msgid "UNINSTALL BEZELS"
-#~ msgstr "DEINSTALLEER BEZELS"
-
-#~ msgid "INSTALL THE BEZEL PROJECT"
-#~ msgstr "INSTALLEER THE BEZEL PROJECT"
-
-#~ msgid "SELECT SYSTEM WHERE BEZELS WILL BE (RE)INSTALLED"
-#~ msgstr "SELECTEER SYSTEEM WAARVOOR BEZELS WORDEN GE(HER)INSTALLEERD"
-
-#~ msgid "UNINSTALL THE BEZEL PROJECT"
-#~ msgstr "DEINSTALLEER THE BEZEL PROJECT"
-
-#~ msgid "SELECT SYSTEM WHERE BEZELS WILL BE REMOVED"
-#~ msgstr "SELECTEER SYSTEEM WAARVOOR BEZELS WORDEN VERWIJDERD"
-
-#~ msgid "BEZELS DELETED SUCCESSFULLY"
-#~ msgstr "BEZELS SUCCESVOL VERWIJDERD"
-
-#~ msgid "SORT CUSTOM COLLECTIONS AND SYSTEMS"
-#~ msgstr "SORTEER AANGEPASTE VERZAMELINGEN EN SYSTEMEN"
-
-#~ msgid "Marquee"
-#~ msgstr "Bannier"
-
-#~ msgid "enter path to marquee"
-#~ msgstr "voer pad naar bannier in"
-
-#~ msgid "Thumbnail"
-#~ msgstr "Thumbnail"
-
-#~ msgid "enter path to thumbnail"
-#~ msgstr "voer pad naar beeld in"
-
-#~ msgid "favorite"
-#~ msgstr "favoriet"
-
-#~ msgid "DISK USAGE"
-#~ msgstr "Gebruikt verbruik"
-
-#, fuzzy
-#~ msgid "%i GAME AVAILABLE"
-#~ msgid_plural "%i GAMES AVAILABLE"
-#~ msgstr[0] ""
-#~ "%i Spel beschikbaar\n"
-#~ "%i Spellen beschikbaar"
-#~ msgstr[1] ""
-
-#~ msgid "AUTO UPDATES"
-#~ msgstr "Automatisch Updates"
-
-#~ msgid "FORGET BLUETOOTH CONTROLLERS"
-#~ msgstr "Vergeet Bluetooth-controllers"
-
-#~ msgid "set hidden"
-#~ msgstr "Maak verborgen"
 
 #~ msgid "CONTROLLER PAIRED"
 #~ msgstr "Controller gekoppeld"
@@ -2599,6 +1729,9 @@ msgstr ""
 #~ msgid "PRESS ESC OR THE HOTKEY TO CANCEL."
 #~ msgstr "Druk ESC of de Hotkey om te stoppen"
 
+#~ msgid "JUMP TO LETTER"
+#~ msgstr "Ga naar letter"
+
 #~ msgid "FAVORITES ONLY"
 #~ msgstr "Alleen favorieten"
 
@@ -2620,6 +1753,9 @@ msgstr ""
 
 #~ msgid "enter ratio"
 #~ msgstr "Wijzig ratio"
+
+#~ msgid "Region"
+#~ msgstr "Regio"
 
 #~ msgid "enter region"
 #~ msgstr "Wijzig regio"
@@ -2729,6 +1865,9 @@ msgstr ""
 
 #~ msgid "NO CONTROLLERS FOUND"
 #~ msgstr "Geen controllers gevonden"
+
+#~ msgid "SCRAPER"
+#~ msgstr "Scraper"
 
 #~ msgid "NONE (700Mhz)"
 #~ msgstr "Geen (700MHz)"

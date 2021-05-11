@@ -8,17 +8,16 @@
 #include <algorithm>
 #include <vector>
 
-bool Settings::DebugText = false;
-bool Settings::DebugImage = false;
-bool Settings::DebugGrid = false;
-
 Settings* Settings::sInstance = NULL;
 static std::string mEmptyString = "";
 
 // these values are NOT saved to es_settings.xml
 // since they're set through command-line arguments, and not the in-program settings menu
 std::vector<const char*> settings_dont_save {
-	{ "Debug" },	
+	{ "Debug" },
+	{ "DebugGrid" },
+	{ "DebugText" },
+	{ "DebugImage" },
 	{ "ForceKid" },
 	{ "ForceKiosk" },
 	{ "IgnoreGamelist" },
@@ -35,8 +34,7 @@ std::vector<const char*> settings_dont_save {
 	{ "ScreenHeight" },
 	{ "ScreenOffsetX" },
 	{ "ScreenOffsetY" },
-	{ "ScreenRotate" },
-	{ "MonitorID" },
+	{ "ScreenRotate" }
 };
 
 Settings::Settings()
@@ -62,24 +60,14 @@ void Settings::setDefaults()
 	mBoolMap["BackgroundJoystickInput"] = false;
 	mBoolMap["ParseGamelistOnly"] = false;
 	mBoolMap["ShowHiddenFiles"] = false;
-	mBoolMap["ShowParentFolder"] = true;
 	mBoolMap["DrawFramerate"] = false;
-	mBoolMap["ShowExit"] = true;	
+	mBoolMap["ShowExit"] = true;
+	mBoolMap["FullscreenBorderless"] = false;
 	mBoolMap["Windowed"] = false;
 	mBoolMap["SplashScreen"] = true;
 	mBoolMap["SplashScreenProgress"] = true;
 	mBoolMap["StartupOnGameList"] = false;
-	mStringMap["StartupSystem"] = "lastsystem";
-
-#if WIN32
-	mBoolMap["ShowOnlyExit"] = true;
-	mBoolMap["FullscreenBorderless"] = true;
-#else
-	mBoolMap["ShowOnlyExit"] = false;
-	mBoolMap["FullscreenBorderless"] = false;
-#endif
-
-	mIntMap["MonitorID"] = -1;
+	mStringMap["StartupSystem"] = "";
 
         // batocera
         mBoolMap["UseOSK"] = true; // on screen keyboard
@@ -87,7 +75,7 @@ void Settings::setDefaults()
 		mBoolMap["ShowControllerActivity"] = true;		
         mIntMap["SystemVolume"] = 95;
         mBoolMap["Overscan"] = false;
-        mStringMap["Language"] = "pt_BR";
+        mStringMap["Lang"] = "pt_BR";
         mStringMap["INPUT P1"] = "DEFAULT";
         mStringMap["INPUT P2"] = "DEFAULT";
         mStringMap["INPUT P3"] = "DEFAULT";
@@ -97,50 +85,37 @@ void Settings::setDefaults()
 
 		mBoolMap["VSync"] = true;	
 		mStringMap["FolderViewMode"] = "never";
-		mStringMap["HiddenSystems"] = "";
-
+		
     mBoolMap["EnableSounds"] = false; // batocera
 	mBoolMap["ShowHelpPrompts"] = true;
 	mBoolMap["ScrapeRatings"] = true;
-	mBoolMap["ScrapePadToKey"] = true;	
 	mBoolMap["IgnoreGamelist"] = false;
 	mBoolMap["HideConsole"] = true;
 	mBoolMap["QuickSystemSelect"] = true;
 	mBoolMap["MoveCarousel"] = true;
-	mBoolMap["SaveGamelistsOnExit"] = true;	
-	mStringMap["ShowBattery"] = "text";	
-	mBoolMap["CheckBiosesAtLaunch"] = true;
-	
-#if WIN32
-	mBoolMap["ShowNetworkIndicator"] = false;
-#else
-	mBoolMap["ShowNetworkIndicator"] = true;
-#endif
+	mBoolMap["SaveGamelistsOnExit"] = true;
+	mBoolMap["ShowBatteryIndicator"] = true;	
 
-	mBoolMap["Debug"] = false;	
+	mBoolMap["Debug"] = false;
+	mBoolMap["DebugGrid"] = false;
+	mBoolMap["DebugText"] = false;
+	mBoolMap["DebugImage"] = false;
 
-	mBoolMap["InvertButtons"] = false;
 	mIntMap["ScreenSaverTime"] = 5*60*1000; // 5 minutes
-	mIntMap["ScraperResizeWidth"] = 640;
+	mIntMap["ScraperResizeWidth"] = 400;
 	mIntMap["ScraperResizeHeight"] = 0;
 
-#if defined(_WIN32) || defined(TINKERBOARD) || defined(X86) || defined(X86_64) || defined(ODROIDN2) || defined(ODROIDC2)
-	// Boards > 1Gb RAM
+#if defined(_WIN32)
 	mIntMap["MaxVRAM"] = 256;
-#elif defined(ODROIDGOA) || defined(RPI2) || defined(RPI3) || defined(RPI4) || defined(ROCKPRO64)
-	// Boards with 1Gb RAM
-	mIntMap["MaxVRAM"] = 128;
-#elif defined(_RPI_) 
-	// Rpi 0, 1
-	mIntMap["MaxVRAM"] = 80;
-#else 
-	// Other boards
-	mIntMap["MaxVRAM"] = 100;
+#else
+	#ifdef _RPI_
+		mIntMap["MaxVRAM"] = 80;
+	#else
+		mIntMap["MaxVRAM"] = 100;
+	#endif
 #endif
 
-	mStringMap["TransitionStyle"] = "auto";
-	mStringMap["GameTransitionStyle"] = "auto";
-
+	mStringMap["TransitionStyle"] = "auto"; // batocera
 	mStringMap["ThemeSet"] = "";
 	mStringMap["ScreenSaverBehavior"] = "dim";
 	mStringMap["GamelistViewStyle"] = "automatic";
@@ -157,9 +132,6 @@ void Settings::setDefaults()
 	mBoolMap["StretchVideoOnScreenSaver"] = false;
 	mStringMap["PowerSaverMode"] = "default"; // batocera
 
-	mBoolMap["StopMusicOnScreenSaver"] = true;
-
-	mBoolMap["RetroachievementsMenuitem"] = true;
 	mIntMap["ScreenSaverSwapImageTimeout"] = 10000;
 	mBoolMap["SlideshowScreenSaverStretch"] = false;
 	// mStringMap["SlideshowScreenSaverBackgroundAudioFile"] = "/userdata/music/slideshow_bg.wav"; // batocera
@@ -171,16 +143,10 @@ void Settings::setDefaults()
 	mStringMap["ScreenSaverDecorations"] = "systems";
 	
 
-	mBoolMap["SlideshowScreenSaverCustomVideoSource"] = false;
-	mStringMap["SlideshowScreenSaverVideoDir"] = "/userdata/screenshots"; // batocera
-	mStringMap["SlideshowScreenSaverVideoFilter"] = ".mp4,.avi";
-	mBoolMap["SlideshowScreenSaverVideoRecurse"] = false;
-
 	// This setting only applies to raspberry pi but set it for all platforms so
 	// we don't get a warning if we encounter it on a different platform
 	mBoolMap["VideoOmxPlayer"] = false;
-
-	#if defined(_RPI_) && !defined(RPI3) && !defined(RPI4)
+	#ifdef _RPI_
 		// we're defaulting to OMX Player for full screen video on the Pi
 		mBoolMap["ScreenSaverOmxPlayer"] = true;
 	#else
@@ -190,21 +156,16 @@ void Settings::setDefaults()
 	mIntMap["ScreenSaverSwapVideoTimeout"] = 30000;
 
 	mBoolMap["VideoAudio"] = true;
-	mBoolMap["ScreenSaverVideoMute"] = false;
 	mBoolMap["VideoLowersMusic"] = true;	
 	mBoolMap["VolumePopup"] = true;
-
-	mIntMap["MusicVolume"] = 128;
 	
 	// Audio out device for Video playback using OMX player.
 	mStringMap["OMXAudioDev"] = "both";
 	mStringMap["CollectionSystemsAuto"] = "all,favorites"; // batocera 2players,4players,favorites,recent
 	mStringMap["CollectionSystemsCustom"] = "";
 	mBoolMap["SortAllSystems"] = true; // batocera
-	mStringMap["SortSystems"] = "manufacturer";	
 	mBoolMap["UseCustomCollectionsSystem"] = true;
 		
-	mBoolMap["HiddenSystemsShowGames"] = true;
 	mBoolMap["CollectionShowSystemInfo"] = true;
 	mBoolMap["FavoritesFirst"] = true;
 
@@ -240,14 +201,6 @@ void Settings::setDefaults()
 
 	mBoolMap["ShowFilenames"] = false;
 	
-#if defined(_WIN32) || defined(X86) || defined(X86_64)
-	mBoolMap["HideWindow"] = false;
-#else
-	mBoolMap["HideWindow"] = true;
-#endif
-
-	mBoolMap["HideWindowFullReinit"] = false;
-
 	mIntMap["WindowWidth"]   = 0;
 	mIntMap["WindowHeight"]  = 0;
 	mIntMap["ScreenWidth"]   = 0;
@@ -269,24 +222,6 @@ void Settings::setDefaults()
 	mBoolMap["audio.thememusics"] = true;	
 	mIntMap["audio.display_titles_time"] = 10;
 	
-	mBoolMap["NetPlayCheckIndexesAtStart"] = false;
-
-#if WIN32
-	mBoolMap["updates.enabled"] = true;
-	mBoolMap["global.retroachievements"] = false;
-	mBoolMap["global.retroachievements.hardcore"] = false;
-	mBoolMap["global.retroachievements.leaderboards"] = false;
-	mBoolMap["global.retroachievements.verbose"] = false;
-	mBoolMap["global.retroachievements.screenshot"] = false;
-
-	mBoolMap["global.netplay_public_announce"] = true;
-	mBoolMap["global.netplay"] = false;
-
-	mBoolMap["kodi.enabled"] = false;
-	mBoolMap["kodi.atstartup"] = false;
-	mBoolMap["wifi.enabled"] = false;
-#endif
-
 	mDefaultBoolMap = mBoolMap;
 	mDefaultIntMap = mIntMap;
 	mDefaultFloatMap = mFloatMap;
@@ -421,30 +356,4 @@ bool Settings::setMethodName(const std::string& name, type value) \
 SETTINGS_GETSET(bool, mBoolMap, getBool, setBool, false);
 SETTINGS_GETSET(int, mIntMap, getInt, setInt, 0);
 SETTINGS_GETSET(float, mFloatMap, getFloat, setFloat, 0.0f);
-//SETTINGS_GETSET(const std::string&, mStringMap, getString, setString, mEmptyString);
-
-std::string Settings::getString(const std::string& name)
-{ 
-	if (mStringMap.find(name) == mStringMap.cend())
-		return mEmptyString;
-
-	return mStringMap[name];
-}
-
-bool Settings::setString(const std::string& name, const std::string& value)
-{ 
-	if (mStringMap.count(name) == 0 || mStringMap[name] != value)
-	{
-		if (value == "" && mStringMap.count(name) == 0)
-			return false;
-
-		mStringMap[name] = value;
-		
-		if (std::find(settings_dont_save.cbegin(), settings_dont_save.cend(), name) == settings_dont_save.cend()) 
-			mWasChanged = true; 
-			
-		return true; 
-	} 
-
-	return false; 
-}
+SETTINGS_GETSET(const std::string&, mStringMap, getString, setString, mEmptyString);

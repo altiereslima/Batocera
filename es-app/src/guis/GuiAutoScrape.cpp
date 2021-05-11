@@ -24,7 +24,7 @@ GuiAutoScrape::~GuiAutoScrape()
 {
 	// view type probably changed (basic -> detailed)
 	ViewController::get()->reloadAll(mWindow);
-	mWindow->closeSplashScreen();
+	mWindow->endRenderLoadingScreen();
 }
 
 bool GuiAutoScrape::input(InputConfig* config, Input input)

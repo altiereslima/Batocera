@@ -25,18 +25,15 @@ private:
 		std::shared_ptr<ButtonComponent> button;
 		const std::string key;
 		const std::string shiftedKey;
-		const std::string altedKey;
-		KeyboardButton(const std::shared_ptr<ButtonComponent> b, const std::string& k, const std::string& sk, const std::string& ak) : button(b), key(k), shiftedKey(sk), altedKey(ak) {};
+		KeyboardButton(const std::shared_ptr<ButtonComponent> b, const std::string& k, const std::string& sk) : button(b), key(k), shiftedKey(sk) {};
 	};
 	
-	std::shared_ptr<ButtonComponent> makeButton(const std::string& key, const std::string& shiftedKey, const std::string& altedKey);
+	std::shared_ptr<ButtonComponent> makeButton(const std::string& key, const std::string& shiftedKey);
 	std::vector<KeyboardButton> keyboardButtons;
-	
-	std::shared_ptr<ButtonComponent> mShiftButton;	
-	std::shared_ptr<ButtonComponent> mAltButton;
+	std::shared_ptr<ButtonComponent> mShiftButton;
+	const Vector2f getButtonSize();
 
 	void shiftKeys();
-	void altKeys();
 
 	NinePatchComponent mBackground;
 	ComponentGrid mGrid;
@@ -44,11 +41,11 @@ private:
 	std::shared_ptr<TextComponent> mTitle;
 	std::shared_ptr<TextEditComponent> mText;
 	std::shared_ptr<ComponentGrid> mKeyboardGrid;
+	std::shared_ptr<ComponentGrid> mButtons;
 	
 	std::function<void(const std::string&)> mOkCallback;
 
 	bool mMultiLine;
 	bool mShift = false;	
-	bool mAlt = false;
 };
 

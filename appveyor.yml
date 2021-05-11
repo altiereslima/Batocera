@@ -16,7 +16,6 @@ clone_folder: c:\src\EmulationStation
 branches:
   only:
     - master
-    - beta
     - stable
 
 environment:
@@ -84,7 +83,6 @@ install:
 build_script:
   # prep for continuous upload
   - if %APPVEYOR_REPO_BRANCH%==master if %prepare_mode%==YES c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" -preponly
-  - if %APPVEYOR_REPO_BRANCH%==beta if %prepare_mode%==YES c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" -preponly
   - if %APPVEYOR_REPO_BRANCH%==stable if %prepare_mode%==YES c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" -preponly
   - ps: if ($env:prepare_mode -eq "YES") { throw "Failing in order to stop the current build matrix job early" }
   
@@ -114,7 +112,7 @@ build_script:
   - mkdir build
   - cd build
   - set ES_LIB_DIR=c:\src\lib
-  - cmake -g "Visual Studio 14 2015 x86" .. -DFREETYPE_INCLUDE_DIRS=%ES_LIB_DIR%\freetype\include -DFREETYPE_LIBRARY=%ES_LIB_DIR%\freetype\freetype.lib -DFreeImage_INCLUDE_DIR=%ES_LIB_DIR%\FreeImage\Source -DFreeImage_LIBRARY=%ES_LIB_DIR%\FreeImage\Dist\x32\FreeImage.lib -DSDL2_INCLUDE_DIR=%ES_LIB_DIR%\SDL2-2.0.12\include -DSDL2_LIBRARY=%ES_LIB_DIR%\SDL2-2.0.12\build\Release\SDL2.lib;%ES_LIB_DIR%\SDL2-2.0.12\build\Release\SDL2main.lib;Imm32.lib;version.lib -DCURL_INCLUDE_DIR=%ES_LIB_DIR%\curl-7.50.3\include -DCURL_LIBRARY=%ES_LIB_DIR%\curl-7.50.3\builds\libcurl-vc14-x86-release-dll-ipv6-sspi-winssl\lib\libcurl.lib -DRAPIDJSON_INCLUDE_DIRS=%ES_LIB_DIR%\rapidjson-1.1.0\include -DVLC_INCLUDE_DIR=%ES_LIB_DIR%\libvlc-2.2.2\include -DVLC_LIBRARIES=%ES_LIB_DIR%\libvlc-2.2.2\lib\msvc\libvlc.lib;%ES_LIB_DIR%\libvlc-2.2.2\lib\msvc\libvlccore.lib -DVLC_VERSION=1.0.0 -DSDLMIXER_INCLUDE_DIR=%ES_LIB_DIR%/SDL2_mixer-2.0.4/include -DSDLMIXER_LIBRARY=%ES_LIB_DIR%/SDL2_mixer-2.0.4/lib/x86/SDL2_mixer.lib -DSCREENSCRAPER_DEV_LOGIN="devid=retrobat&devpassword=JRLmOtnZXwo" -DGAMESDB_APIKEY="8d0c672da1c28c48436204317ccb52ca752e0c7539bc3d475552aaad844d2635" -DCHEEVOS_DEV_LOGIN="z=retrobat&y=yALP1ce6fSiIrPSmc4oonKk4QxexS3Rq"
+  - cmake -g "Visual Studio 14 2015 x86" .. -DFREETYPE_INCLUDE_DIRS=%ES_LIB_DIR%\freetype\include -DFREETYPE_LIBRARY=%ES_LIB_DIR%\freetype\freetype.lib -DFreeImage_INCLUDE_DIR=%ES_LIB_DIR%\FreeImage\Source -DFreeImage_LIBRARY=%ES_LIB_DIR%\FreeImage\Dist\x32\FreeImage.lib -DSDL2_INCLUDE_DIR=%ES_LIB_DIR%\SDL2-2.0.12\include -DSDL2_LIBRARY=%ES_LIB_DIR%\SDL2-2.0.12\build\Release\SDL2.lib;%ES_LIB_DIR%\SDL2-2.0.12\build\Release\SDL2main.lib;Imm32.lib;version.lib -DCURL_INCLUDE_DIR=%ES_LIB_DIR%\curl-7.50.3\include -DCURL_LIBRARY=%ES_LIB_DIR%\curl-7.50.3\builds\libcurl-vc14-x86-release-dll-ipv6-sspi-winssl\lib\libcurl.lib -DRAPIDJSON_INCLUDE_DIRS=%ES_LIB_DIR%\rapidjson-1.1.0\include -DVLC_INCLUDE_DIR=%ES_LIB_DIR%\libvlc-2.2.2\include -DVLC_LIBRARIES=%ES_LIB_DIR%\libvlc-2.2.2\lib\msvc\libvlc.lib;%ES_LIB_DIR%\libvlc-2.2.2\lib\msvc\libvlccore.lib -DVLC_VERSION=1.0.0 -DSDLMIXER_INCLUDE_DIR=%ES_LIB_DIR%/SDL2_mixer-2.0.4/include -DSDLMIXER_LIBRARY=%ES_LIB_DIR%/SDL2_mixer-2.0.4/lib/x86/SDL2_mixer.lib
   
   - cd c:\src\EmulationStation\build
   - '"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild" emulationstation-all.sln /p:Configuration=Release /p:Platform="Win32"'
@@ -142,8 +140,6 @@ build_script:
 on_finish:
   - if %APPVEYOR_REPO_BRANCH%==master c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\*.zip
   - if %APPVEYOR_REPO_BRANCH%==master c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\version.info
-  - if %APPVEYOR_REPO_BRANCH%==beta c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\*.zip
-  - if %APPVEYOR_REPO_BRANCH%==beta c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\version.info
   - if %APPVEYOR_REPO_BRANCH%==stable c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\*.zip
   - if %APPVEYOR_REPO_BRANCH%==stable c:\dev\ciuploadtool\ciuploadtool.exe -suffix="%APPVEYOR_REPO_BRANCH%" C:\src\EmulationStation\version.info
   #- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

@@ -13,6 +13,9 @@ SwitchComponent::SwitchComponent(Window* window, bool state) : GuiComponent(wind
 	mImage.setResize(0, height);
 	mImage.setColorShift(menuTheme->Text.color);
 
+	if (EsLocale::isRTL())
+		mImage.setFlipX(true);
+
 	mSize = mImage.getSize();
 }
 
@@ -31,6 +34,20 @@ bool SwitchComponent::input(InputConfig* config, Input input)
 	if(config->isMappedTo(BUTTON_OK, input) && input.value)
 	{
 		mState = !mState;
+		onStateChanged();
+		return true;
+	}
+
+	if (config->isMappedLike("left", input) && input.value && mState)
+	{
+		mState = false;
+		onStateChanged();
+		return true;
+	}
+
+	if (config->isMappedLike("right", input) && input.value && !mState)
+	{
+		mState = true;
 		onStateChanged();
 		return true;
 	}

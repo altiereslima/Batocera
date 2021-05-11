@@ -22,11 +22,12 @@
 #include "components/BatteryIndicatorComponent.h"
 #include "guis/GuiMsgBox.h"
 #include "components/VolumeInfoComponent.h"
+#include "Splash.h"
+#include "PowerSaver.h"
 
 Window::Window() : mNormalizeNextUpdate(false), mFrameTimeElapsed(0), mFrameCountElapsed(0), mAverageDeltaTime(10),
-  mAllowSleep(true), mSleeping(false), mTimeSinceLastInput(0), mScreenSaver(NULL), mRenderScreenSaver(false), mInfoPopup(NULL), mClockElapsed(0) // batocera
-{	
-	mTransiting = nullptr;
+  mAllowSleep(true), mSleeping(false), mTimeSinceLastInput(0), mScreenSaver(NULL), mRenderScreenSaver(false), mClockElapsed(0) // batocera
+{		
 	mTransitionOffset = 0;
 
 	mHelp = new HelpComponent(this);
@@ -49,68 +50,16 @@ Window::~Window()
 
 	delete mHelp;
 }
-/*
-#include "animations/LambdaAnimation.h"
-#include "animations/AnimationController.h"
-#include <SDL_main.h>
-#include <SDL_timer.h>
-*/
+
 void Window::pushGui(GuiComponent* gui)
 {
-	mTransiting = nullptr;
-
 	if (mGuiStack.size() > 0)
 	{
 		auto& top = mGuiStack.back();
-		top->topWindow(false);
-		/*
-		if (top->getValue() != "GuiMsgBox" && mGuiStack.size() >= 2)
-		{	
-			GuiComponent* showing = gui;
-			GuiComponent* hiding = top;
-
-			mTransiting = hiding;
-			mTransitionOffset = 0;
-
-			showing->setOpacity(0);
-			mGuiStack.push_back(showing);
-
-			int duration = 250;
-			int lastTime = SDL_GetTicks();
-			int curTime = lastTime;
-			int deltaTime = 0.00001;
-
-			AnimationController animController(new LambdaAnimation([this, showing](float t)
-			{
-				float value = Math::lerp(0.0f, 1.0f, t);
-				mTransitionOffset = Renderer::getScreenWidth() * value;
-				mTransiting->setOpacity(255 - (255 * value));
-				showing->setOpacity(255 * value);
-			}, duration));
-		
-			do
-			{
-				curTime = SDL_GetTicks();
-				deltaTime = curTime - lastTime;
-				lastTime = curTime;
-
-				this->update(deltaTime);
-				this->render();
-
-				Renderer::swapBuffers();
-			} 
-			while (!animController.update(deltaTime));
-
-			showing->setOpacity(255);
-			mTransiting->setOpacity(255);
-			mTransitionOffset = 0;
-			mTransiting = nullptr;
-
-			gui->updateHelpPrompts();
-			return;
-		}*/
+		top->topWindow(false);		
 	}
 
+	gui->onShow();
 	mGuiStack.push_back(gui);
 	gui->updateHelpPrompts();
 }
@@ -121,6 +70,7 @@ void Window::removeGui(GuiComponent* gui)
 	{
 		if(*i == gui)
 		{						
+			gui->onHide();
 			i = mGuiStack.erase(i);
 
 			if(i == mGuiStack.cend() && mGuiStack.size()) // we just popped the stack and the stack is not empty
@@ -142,15 +92,23 @@ GuiComponent* Window::peekGui()
 	return mGuiStack.back();
 }
 
-bool Window::init()
+bool Window::init(bool initRenderer, bool initInputManager)
 {
-	if(!Renderer::init())
-	{
-		LOG(LogError) << "Renderer failed to initialize!";
-		return false;
-	}
+	LOG(LogInfo) << "Window::init";
 
-	InputManager::getInstance()->init();
+	if (initRenderer)
+	{
+		if (!Renderer::init())
+		{
+			LOG(LogError) << "Renderer failed to initialize!";
+			return false;
+		}
+	}
+	else 
+		Renderer::activateWindow();
+
+	if (initInputManager)
+		InputManager::getInstance()->init();
 
 	ResourceManager::getInstance()->reloadAll();
 
@@ -206,7 +164,7 @@ void Window::reactivateGui()
 		peekGui()->updateHelpPrompts();
 }
 
-void Window::deinit()
+void Window::deinit(bool deinitRenderer)
 {
 	for (auto extra : mScreenExtras)
 		extra->onHide();
@@ -215,10 +173,14 @@ void Window::deinit()
 	for(auto i = mGuiStack.cbegin(); i != mGuiStack.cend(); i++)
 		(*i)->onHide();
 
-	InputManager::getInstance()->deinit();
+	if (deinitRenderer)
+		InputManager::getInstance()->deinit();
+
 	TextureResource::clearQueue();
 	ResourceManager::getInstance()->unloadAll();
-	Renderer::deinit();
+
+	if (deinitRenderer)
+		Renderer::deinit();
 }
 
 void Window::textInput(const char* text)
@@ -229,28 +191,33 @@ void Window::textInput(const char* text)
 
 void Window::input(InputConfig* config, Input input)
 {
-	if (mScreenSaver) {
+	if (config == nullptr)
+		return;
+	
+	if (config->getDeviceIndex() > 0 && Settings::getInstance()->getBool("FirstJoystickOnly"))
+		return;
+
+	if (mScreenSaver) 
+	{
 		if (mScreenSaver->isScreenSaverActive() && Settings::getInstance()->getBool("ScreenSaverControls") &&
 			((Settings::getInstance()->getString("ScreenSaverBehavior") == "slideshow") || 			
 			(Settings::getInstance()->getString("ScreenSaverBehavior") == "random video")))
 		{
-			if (mScreenSaver->getCurrentGame() != nullptr && (config->isMappedLike("right", input) || config->isMappedTo("start", input) || config->isMappedTo("select", input)))
+			if (config->isMappedLike("right", input) || config->isMappedTo("select", input))
 			{
-				if (config->isMappedLike("right", input) || config->isMappedTo("select", input))
-				{
-					if (input.value != 0) // handle screensaver control
-						mScreenSaver->nextVideo();
+				if (input.value != 0) // handle screensaver control
+					mScreenSaver->nextVideo();
 					
-					return;
-				}
-				else if (config->isMappedTo("start", input) && input.value != 0)
-				{
-					// launch game!
-					cancelScreenSaver();
-					mScreenSaver->launchGame();
-					// to force handling the wake up process
-					mSleeping = true;
-				}
+				mTimeSinceLastInput = 0;
+				return;
+			}
+			else if (config->isMappedTo("start", input) && input.value != 0 && mScreenSaver->getCurrentGame() != nullptr)
+			{
+				// launch game!
+				cancelScreenSaver();
+				mScreenSaver->launchGame();
+				// to force handling the wake up process
+				mSleeping = true;
 			}
 		}
 	}
@@ -272,17 +239,17 @@ void Window::input(InputConfig* config, Input input)
 	if (config->getDeviceId() == DEVICE_KEYBOARD && input.value && input.id == SDLK_g && SDL_GetModState() & KMOD_LCTRL) // && Settings::getInstance()->getBool("Debug"))
 	{
 		// toggle debug grid with Ctrl-G
-		Settings::getInstance()->setBool("DebugGrid", !Settings::getInstance()->getBool("DebugGrid"));
+		Settings::DebugGrid = !Settings::DebugGrid;
 	}
 	else if (config->getDeviceId() == DEVICE_KEYBOARD && input.value && input.id == SDLK_t && SDL_GetModState() & KMOD_LCTRL) // && Settings::getInstance()->getBool("Debug"))
 	{
 		// toggle TextComponent debug view with Ctrl-T
-		Settings::getInstance()->setBool("DebugText", !Settings::getInstance()->getBool("DebugText"));
+		Settings::DebugText = !Settings::DebugText;
 	}
 	else if (config->getDeviceId() == DEVICE_KEYBOARD && input.value && input.id == SDLK_i && SDL_GetModState() & KMOD_LCTRL) // && Settings::getInstance()->getBool("Debug"))
 	{
 		// toggle TextComponent debug view with Ctrl-I
-		Settings::getInstance()->setBool("DebugImage", !Settings::getInstance()->getBool("DebugImage"));
+		Settings::DebugImage = !Settings::DebugImage;
 	}
 	else
 	{
@@ -316,14 +283,6 @@ void Window::displayNotificationMessage(std::string message, int duration)
 	mNotificationMessages.push_back(msg);
 }
 
-void Window::stopInfoPopup() 
-{
-	if (mInfoPopup == nullptr)
-		return;
-	
-	delete mInfoPopup; 
-	mInfoPopup = nullptr;
-}
 
 void Window::processNotificationMessages()
 {
@@ -336,23 +295,110 @@ void Window::processNotificationMessages()
 	mNotificationMessages.pop_back();
 
 	LOG(LogDebug) << "Notification message :" << msg.first.c_str();
-
-	if (mInfoPopup) 
-		delete mInfoPopup; 
 	
-	mInfoPopup = new GuiInfoPopup(this, msg.first, msg.second);
+	if (mNotificationPopups.size() == 0)
+		PowerSaver::pause();
+
+	auto infoPopup = new GuiInfoPopup(this, msg.first, msg.second);
+	mNotificationPopups.push_back(infoPopup);
+
+	layoutNotificationPopups();
+}
+
+void Window::stopNotificationPopups()
+{
+	if (mNotificationPopups.size() == 0)
+		return;
+
+	for (auto ip : mNotificationPopups)
+		delete ip;
+
+	mNotificationPopups.clear();
+	PowerSaver::resume();
+}
+
+void Window::updateNotificationPopups(int deltaTime)
+{
+	bool changed = false;
+
+	for (int i = mNotificationPopups.size() - 1 ; i >= 0 ; i--)
+	{
+		mNotificationPopups[i]->update(deltaTime);
+
+		if (!mNotificationPopups[i]->isRunning())
+		{
+			delete mNotificationPopups[i];
+
+			auto it = mNotificationPopups.begin();
+			std::advance(it, i);
+			mNotificationPopups.erase(it);
+
+			changed = true;
+		}
+		else if (mNotificationPopups[i]->getFadeOut() != 0)
+			changed = true;
+	}
+
+	if (changed)
+	{
+		if (mNotificationPopups.size() == 0)
+			PowerSaver::resume();
+		else
+			layoutNotificationPopups();
+	}
+}
+
+void Window::layoutNotificationPopups()
+{
+	float posY = Renderer::getScreenHeight() * 0.02f;
+	int paddingY = (int)posY;
+
+	for (auto popup : mNotificationPopups)
+	{
+		float fadingOut = popup->getFadeOut();
+		if (fadingOut != 0)
+		{
+			// cubic ease in
+			fadingOut = fadingOut - 1;
+			fadingOut = Math::lerp(0, 1, fadingOut*fadingOut*fadingOut + 1);
+
+			posY -= (popup->getSize().y() + paddingY) * fadingOut;
+		}
+
+		popup->setPosition(popup->getPosition().x(), posY, 0);
+		posY += popup->getSize().y() + paddingY;
+	}
 }
 
 void Window::processSongTitleNotifications()
 {
-	if (!Settings::getInstance()->getBool("audio.display_titles"))
-		return;
-
-	std::string songName = AudioManager::getInstance()->getSongName();
-	if (!songName.empty())
+	if (AudioManager::getInstance()->songNameChanged())
 	{
-		displayNotificationMessage(_U("\uF028  ") + songName); // _("Now playing: ") + 
-		AudioManager::getInstance()->setSongName("");
+		if (Settings::getInstance()->getBool("audio.display_titles"))
+		{
+			std::string songName = AudioManager::getInstance()->getSongName();
+			if (!songName.empty())
+			{
+				std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
+
+				for (int i = mNotificationPopups.size() - 1; i >= 0; i--)
+				{
+					if (mNotificationPopups[i]->getMessage().find(_U("\uF028")) != std::string::npos)
+					{
+						delete mNotificationPopups[i];
+
+						auto it = mNotificationPopups.begin();
+						std::advance(it, i);
+						mNotificationPopups.erase(it);
+					}
+				}
+
+				lock.unlock();
+				displayNotificationMessage(_U("\uF028  ") + songName); // _("Now playing: ") + 
+			}
+		}
+
+		AudioManager::getInstance()->resetSongNameChangedFlag();
 	}	
 }
 
@@ -411,11 +457,15 @@ void Window::update(int deltaTime)
 
 			if (clockTstruct.tm_year > 100) 
 			{ 
-				// Display the clock only if year is more than 1900+100 ; rpi have no internal clock and out of the networks, the date time information has no value */
+				// Display the clock only if year is more than 1900+100 ; rpi have no internal clock and out of the networks, the date time information has no value
 				// Visit http://en.cppreference.com/w/cpp/chrono/c/strftime for more information about date/time format
-				
-				char       clockBuf[32];
-				strftime(clockBuf, sizeof(clockBuf), "%H:%M", &clockTstruct);
+
+				std::string clockBuf;
+				if (Settings::getInstance()->getBool("ClockMode12"))
+					clockBuf = Utils::Time::timeToString(clockNow, "%I:%M %p");
+				else
+					clockBuf = Utils::Time::timeToString(clockNow, "%H:%M");
+
 				mClock->setText(clockBuf);
 			}
 
@@ -424,9 +474,6 @@ void Window::update(int deltaTime)
 	}
 
 	mTimeSinceLastInput += deltaTime;
-
-	if (mTransiting != nullptr)
-		mTransiting->update(deltaTime);
 
 	if (peekGui())
 		peekGui()->update(deltaTime);
@@ -441,6 +488,9 @@ void Window::update(int deltaTime)
 
 	if (mBatteryIndicator)
 		mBatteryIndicator->update(deltaTime);
+
+	updateAsyncNotifications(deltaTime);
+	updateNotificationPopups(deltaTime);
 
 	AudioManager::update(deltaTime);
 }
@@ -460,31 +510,28 @@ void Window::render()
 		bottom->render(transform);
 		if(bottom != top)
 		{
-			if (mTransiting == nullptr && (top->isKindOf<GuiMsgBox>() || top->getTag() == "popup") && mGuiStack.size() > 2)
+			if ((top->getTag() == "GuiLoading") && mGuiStack.size() > 2)
 			{
-				auto& middle = mGuiStack.at(mGuiStack.size()-2);
+				mBackgroundOverlay->render(transform);
+
+				auto& middle = mGuiStack.at(mGuiStack.size() - 2);
 				if (middle != bottom)
 					middle->render(transform);
+
+				top->render(transform);
 			}
-
-			mBackgroundOverlay->render(transform);
-
-			Transform4x4f topTransform = transform;
-
-			if (mTransiting != nullptr)
+			else
 			{
-				Vector3f target(mTransitionOffset, 0, 0);
+				if ((top->isKindOf<GuiMsgBox>() || top->getTag() == "popup") && mGuiStack.size() > 2)
+				{
+					auto& middle = mGuiStack.at(mGuiStack.size() - 2);
+					if (middle != bottom)
+						middle->render(transform);
+				}
 
-				Transform4x4f cam = Transform4x4f::Identity();
-				cam.translation() = -target;
-
-				mTransiting->render(cam);
-
-				target = Vector3f(Renderer::getScreenWidth() - mTransitionOffset, 0, 0);
-				topTransform.translation() = target;
+				mBackgroundOverlay->render(transform);
+				top->render(transform);
 			}
-
-			top->render(topTransform);
 		}
 	}
 	
@@ -511,13 +558,17 @@ void Window::render()
 	Renderer::setMatrix(Transform4x4f::Identity());
 
 	unsigned int screensaverTime = (unsigned int)Settings::getInstance()->getInt("ScreenSaverTime");
-	if(mTimeSinceLastInput >= screensaverTime && screensaverTime != 0)
+	if (mTimeSinceLastInput >= screensaverTime && screensaverTime != 0)
 		startScreenSaver();
 
-	if(!mRenderScreenSaver && mInfoPopup)
-		mInfoPopup->render(transform);
+	// Render notifications
+	if (!mRenderScreenSaver)
+	{
+		for (auto popup : mNotificationPopups)
+			popup->render(transform);
 
-	renderRegisteredNotificationComponents(transform);
+		renderAsyncNotifications(transform);
+	}
 	
 	// Always call the screensaver render function regardless of whether the screensaver is active
 	// or not because it may perform a fade on transition
@@ -557,107 +608,37 @@ void Window::setAllowSleep(bool sleep)
 	mAllowSleep = sleep;
 }
 
-class Splash
+void Window::setCustomSplashScreen(std::string imagePath, std::string customText)
 {
-public:
-	Splash(Window* window, const std::string image = ":/logo.png", bool fullScreenBackGround = true) : //":/logo.jpg") :
-		mBackground(window),
-		mText(window)
-	{
-		mTexture = TextureResource::get(image, false, true, true, false, false);
+	if (Settings::getInstance()->getBool("HideWindow"))
+		return;
 		
-		mBackground.setImage(mTexture);
+	if (!Utils::FileSystem::exists(imagePath))
+		mSplash = std::make_shared<Splash>(this, DEFAULT_SPLASH_IMAGE, false);
+	else
+		mSplash = std::make_shared<Splash>(this, imagePath, false);
 
-		if (fullScreenBackGround)
-		{
-			mBackground.setOrigin(0.5, 0.5);
-			mBackground.setPosition(Renderer::getScreenWidth() / 2, Renderer::getScreenHeight() / 2);
-			mBackground.setMaxSize(Renderer::getScreenWidth(), Renderer::getScreenHeight());
-		}
-		else
-		{
-			mBackground.setResize(Renderer::getScreenWidth() * 0.51f, 0.0f);
-			mBackground.setPosition((Renderer::getScreenWidth() - mBackground.getSize().x()) / 2, (Renderer::getScreenHeight() - mBackground.getSize().y()) / 2 * 0.6f);
-		}
-		
-		auto font = Font::get(FONT_SIZE_MEDIUM);
-		mText.setHorizontalAlignment(ALIGN_CENTER);
-		mText.setFont(font);
-		mText.setGlowColor(0x00000020);
-		mText.setGlowSize(2);
-		mText.setGlowOffset(1, 1);
-		mText.setPosition(0, Renderer::getScreenHeight() * 0.78f);
-		mText.setSize(Renderer::getScreenWidth(), font->getLetterHeight());		
-	}
-
-	void render(std::string text, float percent, unsigned char opacity)
-	{
-		if (opacity == 0)
-			return;
-
-		mText.setText(text);
-		mText.setColor(0xFFFFFF00 | opacity);
-
-		Transform4x4f trans = Transform4x4f::Identity();
-		Renderer::setMatrix(trans);		
-		Renderer::drawRect(0, 0, Renderer::getScreenWidth(), Renderer::getScreenHeight(), 0x00000FF);
-
-		mBackground.render(trans);
-
-		if (percent >= 0)
-		{
-			float baseHeight = 0.036f;
-
-			float w = Renderer::getScreenWidth() / 2.0f;
-			float h = Renderer::getScreenHeight() * baseHeight;
-
-			float x = Renderer::getScreenWidth() / 2.0f - w / 2.0f;
-			float y = Renderer::getScreenHeight() - (Renderer::getScreenHeight() * 3 * baseHeight);
-
-			float corner = Renderer::getScreenHeight() / 105.0;
-
-			Renderer::setMatrix(trans);
-			
-			if (corner > 1)
-				Renderer::enableRoundCornerStencil(x, y, w, h, corner);
-
-			Renderer::drawRect(x, y, w, h, 0x90909000 | (opacity / 2));
-			Renderer::drawRect(x, y, (w*percent), h, 0xDF101000 | opacity, 0x4F000000 | opacity, true);
-
-			if (corner > 1)
-				Renderer::disableStencil();
-		}
-
-		if (!text.empty())
-			mText.render(trans);
-
-		Renderer::swapBuffers();
-
-#if defined(_WIN32)
-		// Avoid Window Freezing on Windows
-		SDL_Event event;
-		while (SDL_PollEvent(&event));
-#endif
-	}
-
-private:
-	ImageComponent mBackground;
-	TextComponent  mText;	
-
-	std::shared_ptr<TextureResource> mTexture;
-};
-
-void Window::endRenderLoadingScreen()
-{
-	mSplash = nullptr;
+	mSplash->update(customText);
 }
 
-void Window::renderLoadingScreen(std::string text, float percent, unsigned char opacity)
+void Window::renderSplashScreen(std::string text, float percent, float opacity)
 {
 	if (mSplash == NULL)
 		mSplash = std::make_shared<Splash>(this);
 
-	mSplash->render(text, percent, opacity);	
+	mSplash->update(text, percent);
+	mSplash->render(opacity);	
+}
+
+void Window::renderSplashScreen(float opacity, bool swapBuffers)
+{
+	if (mSplash != nullptr)
+		mSplash->render(opacity, swapBuffers);
+}
+
+void Window::closeSplashScreen()
+{
+	mSplash = nullptr;
 }
 
 void Window::renderHelpPromptsEarly()
@@ -800,26 +781,20 @@ void Window::renderScreenSaver()
 		mScreenSaver->renderScreenSaver();
 }
 
-void Window::registerNotificationComponent(AsyncNotificationComponent* pc)
+AsyncNotificationComponent* Window::createAsyncNotificationComponent(bool actionLine)
 {
 	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
 
-	if (std::find(mAsyncNotificationComponent.cbegin(), mAsyncNotificationComponent.cend(), pc) != mAsyncNotificationComponent.cend())
-		return;
-
+	AsyncNotificationComponent* pc = new AsyncNotificationComponent(this, actionLine);
 	mAsyncNotificationComponent.push_back(pc);
+	
+	if (mAsyncNotificationComponent.size() == 1)
+		PowerSaver::pause();
+
+	return pc;
 }
 
-void Window::unRegisterNotificationComponent(AsyncNotificationComponent* pc)
-{
-	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
-
-	auto it = std::find(mAsyncNotificationComponent.cbegin(), mAsyncNotificationComponent.cend(), pc);
-	if (it != mAsyncNotificationComponent.cend())
-		mAsyncNotificationComponent.erase(it);
-}
-
-void Window::renderRegisteredNotificationComponents(const Transform4x4f& trans)
+void Window::renderAsyncNotifications(const Transform4x4f& trans)
 {
 	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
 
@@ -827,19 +802,77 @@ void Window::renderRegisteredNotificationComponents(const Transform4x4f& trans)
 
 	float posY = Renderer::getScreenHeight() * 0.02f;
 
+	bool first = true;
 	for (auto child : mAsyncNotificationComponent)
 	{		
 		float posX = Renderer::getScreenWidth()*0.99f - child->getSize().x();
 
-		child->setPosition(posX, posY, 0);
+		float offset = child->getSize().y() + PADDING_H;
+
+		float fadingOut = child->getFading();
+		if (fadingOut != 0)
+		{
+			// cubic ease in
+			fadingOut = fadingOut - 1;
+			fadingOut = Math::lerp(0, 1, fadingOut*fadingOut*fadingOut + 1);
+						
+			if (child->isClosing())
+			{
+				child->setPosition(posX, posY - (offset * fadingOut), 0);
+				offset = offset - (offset * fadingOut);
+
+				auto sz = child->getSize();
+				Renderer::pushClipRect(Vector2i(
+					(int)trans.translation()[0] + posX - PADDING_H, 
+					(int)trans.translation()[1] + (first ? 0 : posY)), 
+					Vector2i(
+					(int)sz.x() + 2 * PADDING_H, 
+					(int)sz.y() + (first ? posY : 0)));
+			}
+			else 
+				child->setPosition(posX + (child->getSize().x() * (1.0 - fadingOut)), posY, 0);
+		}
+		else 
+			child->setPosition(posX, posY, 0);
+
 		child->render(trans);
 
-		posY += child->getSize().y() + PADDING_H;
+		if (fadingOut != 0 && child->isClosing())
+			Renderer::popClipRect();
+
+		posY += offset;
+		first = false;
 	}
 }
 
-void Window::postToUiThread(const std::function<void(Window*)>& func)
+void Window::updateAsyncNotifications(int deltaTime)
 {
+	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
+
+	bool changed = false;
+
+	for (int i = mAsyncNotificationComponent.size() - 1; i >= 0; i--)
+	{
+		mAsyncNotificationComponent[i]->update(deltaTime);
+
+		if (!mAsyncNotificationComponent[i]->isRunning())
+		{
+			delete mAsyncNotificationComponent[i];
+
+			auto it = mAsyncNotificationComponent.begin();
+			std::advance(it, i);
+			mAsyncNotificationComponent.erase(it);
+
+			changed = true;
+		}
+	}
+
+	if (changed && mAsyncNotificationComponent.size() == 0)
+		PowerSaver::resume();
+}
+
+void Window::postToUiThread(const std::function<void()>& func)
+{	
 	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
 
 	mFunctions.push_back(func);	
@@ -850,7 +883,9 @@ void Window::processPostedFunctions()
 	std::unique_lock<std::mutex> lock(mNotificationMessagesLock);
 
 	for (auto func : mFunctions)
-		func(this);	
+	{
+		TRYCATCH("processPostedFunction", func())
+	}
 
 	mFunctions.clear();
 }

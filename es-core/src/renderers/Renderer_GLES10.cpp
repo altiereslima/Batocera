@@ -72,9 +72,24 @@ namespace Renderer
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
 	} // setupWindow
+
+        std::string GLVendor() {
+          const std::string vendor     = glGetString(GL_VENDOR)     ? (const char*)glGetString(GL_VENDOR)     : "";
+          return vendor;
+        }
+
+        std::string GLRenderer() {
+          const std::string renderer   = glGetString(GL_RENDERER)   ? (const char*)glGetString(GL_RENDERER)   : "";
+          return renderer;
+        }
+
+        std::string GLVersion() {
+          const std::string version    = glGetString(GL_VERSION)    ? (const char*)glGetString(GL_VERSION)    : "";
+          return version;
+        }
 
 	void createContext()
 	{
@@ -102,6 +117,9 @@ namespace Renderer
 		unsigned int texture;
 
 		glGenTextures(1, &texture);
+		if (glGetError() != GL_NO_ERROR)
+			return 0;
+
 		bindTexture(texture);
 
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, _repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
@@ -114,6 +132,11 @@ namespace Renderer
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, type, _width, _height, 0, type, GL_UNSIGNED_BYTE, _data);
+		if (glGetError() != GL_NO_ERROR)
+		{
+			glDeleteTextures(1, &texture);
+			return 0;
+		}
 
 		return texture;
 
@@ -260,53 +283,8 @@ namespace Renderer
 
 	} // swapBuffers
 
-#define ROUNDING_PIECES 8.0f
-
-	void drawGLRoundedCorner(float x, float y, double sa, double arc, float r, unsigned int color, std::vector<Vertex> &vertex)
+	void drawTriangleFan(const Vertex* _vertices, const unsigned int _numVertices, const Blend::Factor _srcBlendFactor, const Blend::Factor _dstBlendFactor)
 	{
-		float red = (((color & 0xff000000) >> 24) & 255) / 255.0f;
-		float g = (((color & 0x00ff0000) >> 16) & 255) / 255.0f;
-		float b = (((color & 0x0000ff00) >> 8) & 255) / 255.0f;
-		float a = (((color & 0x000000ff)) & 255) / 255.0f;
-
-		// centre of the arc, for clockwise sense
-		float cent_x = x + r * Math::cosf(sa + ES_PI / 2.0f);
-		float cent_y = y + r * Math::sinf(sa + ES_PI / 2.0f);
-
-		// build up piecemeal including end of the arc
-		int n = ceil(ROUNDING_PIECES * arc / ES_PI * 2.0f);
-		for (int i = 0; i <= n; i++)
-		{
-			float ang = sa + arc * (double)i / (double)n;
-
-			// compute the next point
-			float next_x = cent_x + r * Math::sinf(ang);
-			float next_y = cent_y - r * Math::cosf(ang);
-
-			Vertex vx;
-			vx.pos = Vector2f(next_x, next_y);
-			vx.tex = Vector2f(0, 0);
-			vx.col = color;
-			vertex.push_back(vx);
-		}
-	}
-
-	void drawRoundRect(float x, float y, float width, float height, float radius, unsigned int color, const Blend::Factor _srcBlendFactor, const Blend::Factor _dstBlendFactor)
-	{
-		auto finalColor = convertColor(color);
-
-		std::vector<Vertex> vertex;
-		drawGLRoundedCorner(x, y + radius, 3.0f * ES_PI / 2.0f, ES_PI / 2.0f, radius, finalColor, vertex);
-		drawGLRoundedCorner(x + width - radius, y, 0.0, ES_PI / 2.0f, radius, finalColor, vertex);
-		drawGLRoundedCorner(x + width, y + height - radius, ES_PI / 2.0f, ES_PI / 2.0f, radius, finalColor, vertex);
-		drawGLRoundedCorner(x + radius, y + height, ES_PI, ES_PI / 2.0f, radius, finalColor, vertex);
-
-		Vertex* vxs = new Vertex[vertex.size()];
-		for (int i = 0; i < vertex.size(); i++)
-			vxs[i] = vertex[i];
-
-		bindTexture(0);
-
 		glEnable(GL_BLEND);
 		glBlendFunc(convertBlendFactor(_srcBlendFactor), convertBlendFactor(_dstBlendFactor));
 
@@ -314,21 +292,19 @@ namespace Renderer
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
 
-		glVertexPointer(2, GL_FLOAT, sizeof(Vertex), &vxs[0].pos);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), &vxs[0].tex);
-		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), &vxs[0].col);
+		glVertexPointer(2, GL_FLOAT, sizeof(Vertex), &_vertices[0].pos);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), &_vertices[0].tex);
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), &_vertices[0].col);
 
-		glDrawArrays(GL_TRIANGLE_FAN, 0, vertex.size());
+		glDrawArrays(GL_TRIANGLE_FAN, 0, _numVertices);
 
 		glDisableClientState(GL_COLOR_ARRAY);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisable(GL_BLEND);
-
-		delete[] vxs;	
 	}
 
-	void enableRoundCornerStencil(float x, float y, float width, float height, float radius)
+	void setStencil(const Vertex* _vertices, const unsigned int _numVertices)
 	{
 		bool tx = glIsEnabled(GL_TEXTURE_2D);
 		glDisable(GL_TEXTURE_2D);
@@ -343,7 +319,7 @@ namespace Renderer
 		glStencilMask(0xFF);
 		glClear(GL_STENCIL_BUFFER_BIT);
 
-		drawRoundRect(x, y, width, height, radius, 0xFFFFFFFF);
+		drawTriangleFan(_vertices, _numVertices);
 
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glDepthMask(GL_TRUE);

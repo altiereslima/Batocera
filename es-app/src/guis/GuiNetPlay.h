@@ -34,6 +34,9 @@ struct LobbyAppEntry
 	bool		fixed;
 	std::string retroarch_version;
 	int         port;
+
+	bool		isCrcValid;
+	bool		coreExists;
 };
 
 
@@ -53,7 +56,8 @@ private:
 	bool populateFromJson(const std::string json);
 	void launchGame(LobbyAppEntry entry);
 
-	FileData* getFileData(const std::string gameInfo, bool crc = true);
+	FileData* getFileData(const std::string gameInfo, bool crc = true, std::string coreName = "");
+	bool coreExists(FileData* file, std::string core_name);
 
 	NinePatchComponent				mBackground;
 	ComponentGrid					mGrid;

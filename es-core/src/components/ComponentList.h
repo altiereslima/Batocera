@@ -3,6 +3,18 @@
 #define ES_CORE_COMPONENTS_COMPONENT_LIST_H
 
 #include "IList.h"
+#include "LocaleES.h"
+#include "components/ScrollbarComponent.h"
+
+namespace ComponentListFlags
+{
+	enum UpdateType
+	{
+		UPDATE_ALWAYS,
+		UPDATE_WHEN_SELECTED,
+		UPDATE_NEVER
+	};
+};
 
 struct ComponentListElement
 {
@@ -32,7 +44,10 @@ struct ComponentListRow
 	
 	inline void addElement(const std::shared_ptr<GuiComponent>& component, bool resize_width, bool invert_when_selected = true)
 	{
-		elements.push_back(ComponentListElement(component, resize_width, invert_when_selected));
+		if (EsLocale::isRTL())
+			elements.insert(elements.begin(), ComponentListElement(component, resize_width, invert_when_selected));
+		else
+			elements.push_back(ComponentListElement(component, resize_width, invert_when_selected));
 	}
 
 	// Utility method for making an input handler for "when the users presses A on this, do func."
@@ -52,12 +67,12 @@ struct ComponentListRow
 	}
 };
 
-class ComponentList : public IList<ComponentListRow, void*>
+class ComponentList : public IList<ComponentListRow, std::string>
 {
 public:
 	ComponentList(Window* window);
 
-	void addRow(const ComponentListRow& row, bool setCursorHere = false);
+	void addRow(const ComponentListRow& row, bool setCursorHere = false, bool updateSize = true, const std::string userData = "");
 	void addGroup(const std::string& label, bool forceVisible = false);
 
 	void textInput(const char* text) override;
@@ -70,8 +85,12 @@ public:
 	void onFocusGained() override;
 	void onFocusLost() override;
 
+	void setUpdateType(ComponentListFlags::UpdateType updateType) { mUpdateType = updateType;  }
+
 	bool moveCursor(int amt);
 	inline int getCursorId() const { return mCursor; }
+
+	std::string getSelectedUserData();
 	
 	float getTotalRowHeight() const;
 	inline float getRowHeight(int row) const { return getRowHeight(mEntries.at(row).data); }
@@ -99,7 +118,7 @@ private:
 	bool mFocused;
 
 	void updateCameraOffset();
-	void updateElementPosition(const ComponentListRow& row);
+	void updateElementPosition(const ComponentListRow& row, float yOffset = -1.0);
 	void updateElementSize(const ComponentListRow& row);
 	
 	float getRowHeight(const ComponentListRow& row) const;
@@ -107,7 +126,11 @@ private:
 	float mSelectorBarOffset;
 	float mCameraOffset;
 
+	ComponentListFlags::UpdateType mUpdateType;
+
 	std::function<void(CursorState state)> mCursorChangedCallback;
+
+	ScrollbarComponent mScrollbar;
 };
 
 #endif // ES_CORE_COMPONENTS_COMPONENT_LIST_H

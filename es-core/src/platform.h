@@ -11,10 +11,38 @@
 #define sleep Sleep
 #endif
 
-int runShutdownCommand(); // shut down the system (returns 0 if successful)
-int runRestartCommand(); // restart the system (returns 0 if successful)
-int runSystemCommand(const std::string& cmd_utf8); // run a utf-8 encoded in the shell (requires wstring conversion on Windows)
-int quitES(const std::string& filename);
-void touch(const std::string& filename);
+class Window;
+
+enum QuitMode
+{
+	QUIT = 0,
+	RESTART = 1,
+	SHUTDOWN = 2,
+	REBOOT = 3,
+	FAST_SHUTDOWN = 4,
+	FAST_REBOOT = 5
+};
+
+int runSystemCommand(const std::string& cmd_utf8, const std::string& name, Window* window); // run a utf-8 encoded in the shell (requires wstring conversion on Windows)
+int quitES(QuitMode mode = QuitMode::QUIT);
+bool isFastShutdown();
+void processQuitMode();
+
+struct BatteryInformation
+{
+	BatteryInformation()
+	{
+		hasBattery = false;
+		level = 0;
+		isCharging = false;
+	}
+
+	bool hasBattery;
+	int  level;
+	bool isCharging;
+};
+
+BatteryInformation queryBatteryInformation();
+std::string queryIPAdress();
 
 #endif // ES_CORE_PLATFORM_H

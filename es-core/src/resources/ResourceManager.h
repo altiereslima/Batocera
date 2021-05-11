@@ -4,6 +4,8 @@
 
 #include <list>
 #include <memory>
+#include <string>
+#include <vector>
 
 //The ResourceManager exists to...
 //Allow loading resources embedded into the executable like an actual file.
@@ -30,11 +32,14 @@ public:
 	static std::shared_ptr<ResourceManager>& getInstance();
 
 	void addReloadable(std::weak_ptr<IReloadable> reloadable);
+	void removeReloadable(std::weak_ptr<IReloadable> reloadable);
 
 	void unloadAll();
 	void reloadAll();
 
 	std::string getResourcePath(const std::string& path) const;
+	std::vector<std::string> getResourcePaths() const;
+
 	const ResourceData getFileData(const std::string& path) const;
 	bool fileExists(const std::string& path) const;
 
@@ -50,6 +55,7 @@ private:
 	public:
 		std::weak_ptr<IReloadable> data;
 		bool reload;
+		bool locked;
 	};
 
 	std::list<std::shared_ptr<ReloadableInfo>> mReloadables;

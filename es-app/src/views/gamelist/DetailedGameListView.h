@@ -6,14 +6,12 @@
 #include "components/RatingComponent.h"
 #include "components/ScrollableContainer.h"
 #include "views/gamelist/BasicGameListView.h"
-
-class VideoComponent;
+#include "DetailedContainer.h"
 
 class DetailedGameListView : public BasicGameListView
 {
 public:
 	DetailedGameListView(Window* window, FolderData* root);
-	~DetailedGameListView();
 
 	virtual void onThemeChanged(const std::shared_ptr<ThemeData>& theme) override;
 	virtual void onShow() override;
@@ -28,40 +26,13 @@ public:
 
 	virtual void launch(FileData* game) override;
 
+protected:
+	virtual void update(int deltaTime) override;
+
 private:
 	void updateInfoPanel();
 
-	void createVideo();
-	void createMarquee();
-	void createImage();
-	void createThumbnail();
-
-	void initMDLabels();
-	void initMDValues();
-	
-	ImageComponent* mImage;
-	ImageComponent* mThumbnail;
-	ImageComponent* mMarquee;
-	VideoComponent* mVideo;
-
-	TextComponent mLblRating, mLblReleaseDate, mLblDeveloper, mLblPublisher, mLblGenre, mLblPlayers, mLblLastPlayed, mLblPlayCount, mLblGameTime;
-
-	RatingComponent mRating;
-	DateTimeComponent mReleaseDate;
-	TextComponent mDeveloper;
-	TextComponent mPublisher;
-	TextComponent mGenre;
-	TextComponent mPlayers;
-	DateTimeComponent mLastPlayed;
-	TextComponent mPlayCount;
-	TextComponent mName;
-	TextComponent mGameTime;
-
-	std::vector<TextComponent*> getMDLabels();
-	std::vector<GuiComponent*> getMDValues();
-
-	ScrollableContainer mDescContainer;
-	TextComponent mDescription;
+	DetailedContainerHost mDetails;
 };
 
 #endif // ES_APP_VIEWS_GAME_LIST_DETAILED_GAME_LIST_VIEW_H

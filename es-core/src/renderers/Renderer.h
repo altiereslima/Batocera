@@ -2,6 +2,7 @@
 #ifndef ES_CORE_RENDERER_RENDERER_H
 #define ES_CORE_RENDERER_RENDERER_H
 
+#include <vector>
 #include "math/Vector2f.h"
 
 class  Transform4x4f;
@@ -77,11 +78,15 @@ namespace Renderer
 	int         getScreenOffsetX();
 	int         getScreenOffsetY();
 	int         getScreenRotate ();
+	float		getScreenProportion();
 
 	// API specific
 	unsigned int convertColor      (const unsigned int _color);
 	unsigned int getWindowFlags    ();
 	void         setupWindow       ();
+        std::string GLVendor();
+        std::string GLRenderer();
+        std::string GLVersion();
 	void         createContext     ();
 	void         destroyContext    ();
 	unsigned int createTexture     (const Texture::Type _type, const bool _linear, const bool _repeat, const unsigned int _width, const unsigned int _height, void* _data);
@@ -103,11 +108,17 @@ namespace Renderer
 	bool         isSmallScreen      ();
 	unsigned int mixColors(unsigned int first, unsigned int second, float percent);
 
+	void		drawRoundRect(float x, float y, float w, float h, float radius, unsigned int color, const Blend::Factor _srcBlendFactor = Blend::SRC_ALPHA, const Blend::Factor _dstBlendFactor = Blend::ONE_MINUS_SRC_ALPHA);
+	void		enableRoundCornerStencil(float x, float y, float size_x, float size_y, float radius);
+	
+	void		drawTriangleFan(const Vertex* _vertices, const unsigned int _numVertices, const Blend::Factor _srcBlendFactor = Blend::SRC_ALPHA, const Blend::Factor _dstBlendFactor = Blend::ONE_MINUS_SRC_ALPHA);
 
-	void drawRoundRect(float x, float y, float w, float h, float radius, unsigned int color, const Blend::Factor _srcBlendFactor = Blend::SRC_ALPHA, const Blend::Factor _dstBlendFactor = Blend::ONE_MINUS_SRC_ALPHA);
+	void		setStencil(const Vertex* _vertices, const unsigned int _numVertices);
+	void		disableStencil();
 
-	void enableRoundCornerStencil(float x, float y, float size_x, float size_y, float radius);
-	void disableStencil();
+	std::vector<Vertex> createRoundRect(float x, float y, float width, float height, float radius, unsigned int color = 0xFFFFFFFF);
+
+	void		activateWindow();
 
 } // Renderer::
 

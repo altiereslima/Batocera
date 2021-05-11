@@ -3,6 +3,7 @@
 #define ES_CORE_SETTINGS_H
 
 #include <map>
+#include <string>
 
 //This is a singleton for storing settings.
 class Settings
@@ -17,7 +18,7 @@ public:
 	bool getBool(const std::string& name);
 	int getInt(const std::string& name);
 	float getFloat(const std::string& name);
-	const std::string& getString(const std::string& name);
+	std::string getString(const std::string& name);
 
 	bool setBool(const std::string& name, bool value);
 	bool setInt(const std::string& name, int value);
@@ -25,6 +26,10 @@ public:
 	bool setString(const std::string& name, const std::string& value);
 
 	std::map<std::string, std::string>& getStringMap() { return mStringMap; }
+
+	static bool DebugText;
+	static bool DebugImage;
+	static bool DebugGrid;
 
 private:
 	static Settings* sInstance;

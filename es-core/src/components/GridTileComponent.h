@@ -6,6 +6,7 @@
 #include "ImageComponent.h"
 #include "TextComponent.h"
 #include "ThemeData.h"
+#include "resources/TextureResource.h"
 
 class VideoComponent;
 
@@ -81,6 +82,7 @@ public:
 		fontSize = 0;
 		glowColor = 0;
 		glowSize = 0;
+		padding = Vector4f::Zero();
 	}
 
 	void mixProperties(GridTextProperties& def, GridTextProperties& sel, float percent);
@@ -93,16 +95,15 @@ public:
 
 		text->setPosition(pos.x() * parentSize.x(), pos.y() * parentSize.y());
 		text->setSize(size.x() * parentSize.x(), size.y() * parentSize.y());
+	//	text->setPadding(padding);
 		text->setColor(color);
 		text->setBackgroundColor(backColor);
 		text->setGlowColor(glowColor);
 		text->setGlowSize(glowSize);
 		text->setAutoScroll(autoScroll);
-		text->setFont(fontPath, fontSize * (float)Renderer::getScreenHeight());
+		text->setFont(fontPath, fontSize * Math::min(Renderer::getScreenHeight(), Renderer::getScreenWidth()));
 	}
-
 	
-
 	bool Loaded;
 	bool Visible;
 
@@ -118,6 +119,7 @@ public:
 	std::string  fontPath;
 	float fontSize;
 	bool autoScroll;
+	Vector4f padding;
 };
 
 struct GridNinePatchProperties
@@ -132,9 +134,15 @@ public:
 		cornerSize = Vector2f(16, 16);
 		path = ":/frame.png";
 		animateTime = 0;
+		padding = Vector4f::Zero();
+		mTexture = TextureResource::get(path, false, true);
 	}
 
-
+	void setImagePath(const std::string _path)
+	{
+		path = _path;
+		mTexture = TextureResource::get(path, false, true);
+	}
 
 	bool applyTheme(const ThemeData::ThemeElement* elem);
 
@@ -149,9 +157,8 @@ public:
 		ctl->setAnimateTiming(animateTime);
 		ctl->setAnimateColor(animateColor);
 		ctl->setImagePath(path);
+		ctl->setPadding(padding);
 	}
-
-
 
 	bool Loaded;
 	bool Visible;
@@ -160,9 +167,13 @@ public:
 	unsigned int centerColor;
 	unsigned int edgeColor;
 	std::string  path;
+	Vector4f	 padding;
 
 	unsigned int animateColor;
 	float animateTime;
+
+	// Store texture to avoid unloading & flickering
+	std::shared_ptr<TextureResource> mTexture;
 };
 
 struct GridTileProperties
@@ -177,6 +188,7 @@ struct GridTileProperties
 	GridImageProperties		Image;
 	GridImageProperties		Marquee;
 	GridImageProperties		Favorite;
+	GridImageProperties		Cheevos;
 	GridImageProperties		ImageOverlay;
 };
 
@@ -205,10 +217,10 @@ public:
 	void setMarquee(const std::string& path);
 	
 	void setFavorite(bool favorite);
+	void setCheevos(bool favorite);
 	bool hasFavoriteMedia() { return mFavorite != nullptr; }
 
-	void setSelected(bool selected, bool allowAnimation = true, Vector3f* pPosition = NULL, bool force = false);
-	void setVisible(bool visible);
+	void setSelected(bool selected, bool allowAnimation = true, Vector3f* pPosition = NULL, bool force = false);	
 
 	void forceSize(Vector2f size, float selectedZoom = 1.0);
 
@@ -225,13 +237,22 @@ public:
 	virtual void onScreenSaverActivate();
 	virtual void onScreenSaverDeactivate();
 
+	bool isMinSizeTile();
+	bool hasMarquee();
+	void setIsDefaultImage(bool value = true) { mIsDefaultImage = value; }
+
+	void forceMarquee(const std::string& path);
+
 	std::shared_ptr<TextureResource> getTexture(bool marquee = false);
+
+	Vector3f getLaunchTarget();
 
 private:
 	void	resetProperties();
 	void	createVideo();
 	void	createMarquee();
 	void	createFavorite();
+	void	createCheevos();
 	void	createImageOverlay();
 	void	startVideo();
 	void	stopVideo();
@@ -260,8 +281,7 @@ private:
 	void setSelectedZoom(float percent);
 
 	float mSelectedZoomPercent;
-	bool mSelected;
-	bool mVisible;
+	bool mSelected;	
 
 	bool mIsDefaultImage;
 
@@ -271,10 +291,11 @@ private:
 	ImageComponent* mImage;
 	ImageComponent* mMarquee;
 	ImageComponent* mFavorite;
+	ImageComponent* mCheevos;
 	ImageComponent* mImageOverlay;
 
-	bool mVideoPlaying;
-	bool mShown;
+	bool mVideoPlaying;	
+	bool mHasStandardMarquee;
 };
 
 #endif // ES_CORE_COMPONENTS_GRID_TILE_COMPONENT_H

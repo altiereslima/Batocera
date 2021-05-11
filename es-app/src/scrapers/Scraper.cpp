@@ -1,6 +1,7 @@
 #include "scrapers/Scraper.h"
 
 #include "FileData.h"
+#include "ArcadeDBJSONScraper.h"
 #include "GamesDBJSONScraper.h"
 #include "ScreenScraper.h"
 #include "Log.h"
@@ -11,44 +12,61 @@
 #include "utils/FileSystemUtil.h"
 #include "utils/StringUtil.h"
 #include <thread>
+#include <SDL_timer.h>
 
-// batocera
-const std::map<std::string, generate_scraper_requests_func> scraper_request_funcs {
-	{ "ScreenScraper", &screenscraper_generate_scraper_requests },
-	{ "TheGamesDB", &thegamesdb_generate_json_scraper_requests }
+#define OVERQUOTA_RETRY_DELAY 15000
+#define OVERQUOTA_RETRY_COUNT 5
+
+std::vector<std::pair<std::string, Scraper*>> Scraper::scrapers
+{
+#ifdef SCREENSCRAPER_DEV_LOGIN
+	{ "ScreenScraper", new ScreenScraperScraper() },
+#endif
+
+#ifdef GAMESDB_APIKEY
+	{ "TheGamesDB", new TheGamesDBScraper() },
+#endif
+
+	{ "ArcadeDB", new ArcadeDBScraper() }
 };
 
-std::unique_ptr<ScraperSearchHandle> startScraperSearch(const ScraperSearchParams& params)
+Scraper* Scraper::getScraper(const std::string name)
+{	
+	auto scraper = name;
+	if(scraper.empty())
+		scraper = Settings::getInstance()->getString("Scraper");
+	
+	for (auto scrap : Scraper::scrapers)
+		if (scrap.first == scraper)
+			return scrap.second;
+
+	return nullptr;
+}
+
+bool Scraper::isValidConfiguredScraper()
 {
-	const std::string& name = Settings::getInstance()->getString("Scraper");
+	return getScraper() != nullptr;
+}
 
+bool Scraper::hasMissingMedia(FileData* file)
+{
+	return !Utils::FileSystem::exists(file->getMetadata(MetaDataId::Image));
+}
+
+std::unique_ptr<ScraperSearchHandle> Scraper::search(const ScraperSearchParams& params)
+{
 	std::unique_ptr<ScraperSearchHandle> handle(new ScraperSearchHandle());
-
-	// Check if the Scraper in the settings still exists as a registered scraping source.
-	auto it = scraper_request_funcs.find(name);
-	if (it != scraper_request_funcs.end())
-		it->second(params, handle->mRequestQueue, handle->mResults);
-	else
-		LOG(LogWarning) << "Configured scraper (" << name << ") unavailable, scraping aborted.";	
-
+	generateRequests(params, handle->mRequestQueue, handle->mResults);
 	return handle;
 }
 
-std::vector<std::string> getScraperList()
+std::vector<std::string> Scraper::getScraperList()
 {
 	std::vector<std::string> list;
-	for(auto it = scraper_request_funcs.cbegin(); it != scraper_request_funcs.cend(); it++)
-	{
-		list.push_back(it->first);
-	}
+	for(auto& it : Scraper::scrapers)
+		list.push_back(it.first);
 
 	return list;
-}
-
-bool isValidConfiguredScraper()
-{
-	const std::string& name = Settings::getInstance()->getString("Scraper");
-	return scraper_request_funcs.find(name) != scraper_request_funcs.end();
 }
 
 // ScraperSearchHandle
@@ -71,8 +89,8 @@ void ScraperSearchHandle::update()
 
 		if(status == ASYNC_ERROR)
 		{
-			// propegate error
-			setError(req.getErrorCode(), req.getStatusString());
+			// propagate error
+			setError(req.getErrorCode(), Utils::String::removeHtmlTags(req.getStatusString()));
 
 			// empty our queue
 			while(!mRequestQueue.empty())
@@ -82,12 +100,17 @@ void ScraperSearchHandle::update()
 		}
 
 		// finished this one, see if we have any more
-		if(status == ASYNC_DONE)
+		if (status == ASYNC_DONE)
 		{
-			mRequestQueue.pop();
+			// If we have results, exit, else process the next request
+			if (mResults.size() > 0)
+			{
+				while (!mRequestQueue.empty())
+					mRequestQueue.pop();
+			}
+			else
+				mRequestQueue.pop();
 		}
-
-		// status == ASYNC_IN_PROGRESS
 	}
 
 	// we finished without any errors!
@@ -98,14 +121,6 @@ void ScraperSearchHandle::update()
 	}
 }
 
-
-
-// ScraperRequest
-ScraperRequest::ScraperRequest(std::vector<ScraperSearchResult>& resultsWrite) : mResults(resultsWrite)
-{
-}
-
-
 // ScraperHttpRequest
 ScraperHttpRequest::ScraperHttpRequest(std::vector<ScraperSearchResult>& resultsWrite, const std::string& url) 
 	: ScraperRequest(resultsWrite)
@@ -113,6 +128,7 @@ ScraperHttpRequest::ScraperHttpRequest(std::vector<ScraperSearchResult>& results
 	setStatus(ASYNC_IN_PROGRESS);
 	mRequest = new HttpReq(url);
 	mRetryCount = 0;
+	mOverQuotaPendingTime = 0;
 }
 
 ScraperHttpRequest::~ScraperHttpRequest()
@@ -122,6 +138,23 @@ ScraperHttpRequest::~ScraperHttpRequest()
 
 void ScraperHttpRequest::update()
 {
+	if (mOverQuotaPendingTime > 0)
+	{
+		int lastTime = SDL_GetTicks();
+		if (lastTime - mOverQuotaPendingTime > OVERQUOTA_RETRY_DELAY)
+		{
+			mOverQuotaPendingTime = 0;
+
+			LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying";
+
+			std::string url = mRequest->getUrl();
+			delete mRequest;
+			mRequest = new HttpReq(url);
+		}
+
+		return;
+	}
+
 	HttpReq::Status status = mRequest->status();
 
 	// not ready yet
@@ -138,7 +171,7 @@ void ScraperHttpRequest::update()
 	if (status == HttpReq::REQ_429_TOOMANYREQUESTS)
 	{
 		mRetryCount++;
-		if (mRetryCount > 4)
+		if (mRetryCount >= OVERQUOTA_RETRY_COUNT)
 		{
 			setStatus(ASYNC_DONE); // Ignore error
 			return;
@@ -146,16 +179,8 @@ void ScraperHttpRequest::update()
 
 		setStatus(ASYNC_IN_PROGRESS);
 
-		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Wait before Retrying";
-
-		std::string url = mRequest->getUrl();
-		std::this_thread::sleep_for(std::chrono::seconds(mRetryCount < 3 ? 5 : 10));
-		
-		delete mRequest;
-		mRequest = new HttpReq(url);
-
-		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying";
-
+		mOverQuotaPendingTime = SDL_GetTicks();
+		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying in 5 seconds";
 		return;
 	}
 
@@ -169,155 +194,82 @@ void ScraperHttpRequest::update()
 	// Blocking errors
 	if (status != HttpReq::REQ_SUCCESS)
 	{		
-		setError(status, mRequest->getErrorMsg());
+		setError(status, Utils::String::removeHtmlTags(mRequest->getErrorMsg()));
 		return;
 	}	
-	
 
 	// everything else is some sort of error
 	LOG(LogError) << "ScraperHttpRequest network error (status: " << status << ") - " << mRequest->getErrorMsg();
-	setError(mRequest->getErrorMsg());
+	setError(Utils::String::removeHtmlTags(mRequest->getErrorMsg()));
 }
 
+std::unique_ptr<MDResolveHandle> ScraperSearchResult::resolveMetaDataAssets(const ScraperSearchParams& search)
+{
+	return std::unique_ptr<MDResolveHandle>(new MDResolveHandle(*this, search));
+}
 
 // metadata resolving stuff
-
-std::unique_ptr<MDResolveHandle> resolveMetaDataAssets(const ScraperSearchResult& result, const ScraperSearchParams& search)
-{
-	return std::unique_ptr<MDResolveHandle>(new MDResolveHandle(result, search));
-}
-
 MDResolveHandle::MDResolveHandle(const ScraperSearchResult& result, const ScraperSearchParams& search) : mResult(result)
 {
 	mPercent = -1;
 
-	std::string ext;
-
-	// If we have a file extension returned by the scraper, then use it.
-	// Otherwise, try to guess it by the name of the URL, which point to an image.
-	if (!result.imageType.empty())
+	for (auto& url : result.urls)
 	{
-		ext = result.imageType;
-	}
-	else 
-	{
-		size_t dot = result.imageUrl.find_last_of('.');
-
-		if (dot != std::string::npos)
-			ext = result.imageUrl.substr(dot, std::string::npos);
-	}
-
-	bool ss = Settings::getInstance()->getString("Scraper") == "ScreenScraper";
-
-	auto tmp = Settings::getInstance()->getString("ScrapperImageSrc");
-	auto md = search.game->getMetadata().get("image");
-
-	if (!search.overWriteMedias && ss && !Settings::getInstance()->getString("ScrapperImageSrc").empty() && Utils::FileSystem::exists(search.game->getMetadata().get("image")))
-		mResult.mdl.set("image", search.game->getMetadata().get("image"));
-	else if (!result.imageUrl.empty())
-	{
-		std::string imgPath = getSaveAsPath(search, "image", ext);
-
-		if (!search.overWriteMedias && Utils::FileSystem::exists(imgPath))
+		if (url.second.url.empty())
+			continue;
+		
+		if (!search.overWriteMedias && Utils::FileSystem::exists(search.game->getMetadata(url.first)))
 		{
-			mResult.mdl.set("image", imgPath);
+			mResult.mdl.set(url.first, search.game->getMetadata(url.first));
+			continue;
+		}
 
-			if (mResult.thumbnailUrl.find(mResult.imageUrl) == 0)
-				mResult.thumbnailUrl = "";
+		bool resize = true;
 
-			mResult.imageUrl = "";
+		std::string suffix = "image";
+		switch (url.first)
+		{
+		case MetaDataId::Video: suffix = "video";  resize = false; break;
+		case MetaDataId::FanArt: suffix = "fanart"; resize = false; break;
+		case MetaDataId::BoxBack: suffix = "boxback"; resize = false; break;
+		case MetaDataId::BoxArt: suffix = "box"; resize = false; break;
+		case MetaDataId::Wheel: suffix = "wheel"; resize = false; break;		
+		case MetaDataId::TitleShot: suffix = "titleshot"; break;
+		case MetaDataId::Manual: suffix = "manual"; resize = false;  break;
+		case MetaDataId::Magazine: suffix = "magazine"; resize = false;  break;
+		case MetaDataId::Map: suffix = "map"; resize = false; break;
+		case MetaDataId::Cartridge: suffix = "cartridge"; break;
+		}
+
+		auto ext = url.second.format;
+		if (ext.empty())
+			ext = Utils::FileSystem::getExtension(url.second.url);
+
+		std::string resourcePath = Scraper::getSaveAsPath(search.game, url.first, ext);
+
+		if (!search.overWriteMedias && Utils::FileSystem::exists(resourcePath))
+		{
+			mResult.mdl.set(url.first, resourcePath);
+			if (mResult.urls.find(url.first) != mResult.urls.cend())
+				mResult.urls[url.first].url = "";
 		}
 		else
-
+		{
 			mFuncs.push_back(new ResolvePair(
-				[this, result, imgPath]
-		{
-			return downloadImageAsync(result.imageUrl, imgPath);
-		},
-			[this, imgPath]
-		{
-			mResult.mdl.set("image", imgPath);
+				[this, url, resourcePath, resize] 
+				{ 
+					return downloadImageAsync(url.second.url, resourcePath, resize); 
+				},
+				[this, url](ImageDownloadHandle* result)
+				{
+					auto finalFile = result->getImageFileName();
+					mResult.mdl.set(url.first, finalFile);
 
-			if (mResult.thumbnailUrl.find(mResult.imageUrl) == 0)
-				mResult.thumbnailUrl = "";
-
-			mResult.imageUrl = "";
-		}, "image", result.mdl.getName()));
-	}
-
-	if (!search.overWriteMedias && ss && !Settings::getInstance()->getString("ScrapperThumbSrc").empty() && Utils::FileSystem::exists(search.game->getMetadata().get("thumbnail")))
-		mResult.mdl.set("thumbnail", search.game->getMetadata().get("thumbnail"));
-	else if (!result.thumbnailUrl.empty() && (result.imageUrl.empty() || result.thumbnailUrl.find(result.imageUrl) != 0))
-	{
-		std::string thumbPath = getSaveAsPath(search, "thumb", ext);
-
-		if (!search.overWriteMedias && Utils::FileSystem::exists(thumbPath))
-		{
-			mResult.mdl.set("thumbnail", thumbPath);
-			mResult.thumbnailUrl = "";
+					if (mResult.urls.find(url.first) != mResult.urls.cend())
+						mResult.urls[url.first].url = "";
+				},
+				suffix, result.mdl.getName())); // "thumbnail"
 		}
-		else
-
-			mFuncs.push_back(new ResolvePair(
-				[this, result, thumbPath]
-		{
-			return downloadImageAsync(result.thumbnailUrl, thumbPath);
-		},
-			[this, thumbPath]
-		{
-			mResult.mdl.set("thumbnail", thumbPath);
-			mResult.thumbnailUrl = "";
-		}, "thumbnail", result.mdl.getName()));
-	}
-
-	if (!search.overWriteMedias && ss && !Settings::getInstance()->getString("ScrapperLogoSrc").empty() && Utils::FileSystem::exists(search.game->getMetadata().get("marquee")))
-		mResult.mdl.set("marquee", search.game->getMetadata().get("marquee"));
-	else if (!result.marqueeUrl.empty())
-	{
-		std::string marqueePath = getSaveAsPath(search, "marquee", ext);
-
-		if (!search.overWriteMedias && Utils::FileSystem::exists(marqueePath))
-		{
-			mResult.mdl.set("marquee", marqueePath);
-			mResult.marqueeUrl = "";
-		}
-		else
-
-			mFuncs.push_back(new ResolvePair(
-				[this, result, marqueePath]
-		{
-			return downloadImageAsync(result.marqueeUrl, marqueePath);
-		},
-			[this, marqueePath]
-		{
-			mResult.mdl.set("marquee", marqueePath);
-			mResult.marqueeUrl = "";
-		}, "marquee", result.mdl.getName()));
-	}
-
-	if (!search.overWriteMedias && Settings::getInstance()->getBool("ScrapeVideos") && Utils::FileSystem::exists(search.game->getMetadata().get("video")))
-		mResult.mdl.set("video", search.game->getMetadata().get("video"));
-	else if (!result.videoUrl.empty())
-	{
-		std::string videoPath = getSaveAsPath(search, "video", ".mp4");
-
-		if (!search.overWriteMedias && Utils::FileSystem::exists(videoPath))
-		{
-			mResult.mdl.set("video", videoPath);
-			mResult.videoUrl = "";
-		}
-		else
-
-			mFuncs.push_back(new ResolvePair(
-				[this, result, videoPath]
-		{
-			return downloadImageAsync(result.videoUrl, videoPath);
-		},
-			[this, videoPath]
-		{
-			mResult.mdl.set("video", videoPath);
-			mResult.videoUrl = "";
-		}, "video", result.mdl.getName()));
 	}
 
 	auto it = mFuncs.cbegin();
@@ -357,8 +309,8 @@ void MDResolveHandle::update()
 		return;
 	}
 	else if (pPair->handle->status() == ASYNC_DONE)
-	{
-		pPair->onFinished();
+	{		
+		pPair->onFinished(pPair->handle.get());
 		mFuncs.erase(it);
 		delete pPair;
 
@@ -375,16 +327,34 @@ void MDResolveHandle::update()
 		setStatus(ASYNC_DONE);
 }
 
-std::unique_ptr<ImageDownloadHandle> downloadImageAsync(const std::string& url, const std::string& saveAs)
+std::unique_ptr<ImageDownloadHandle> MDResolveHandle::downloadImageAsync(const std::string& url, const std::string& saveAs, bool resize)
 {
+	LOG(LogDebug) << "downloadImageAsync : " << url << " -> " << saveAs;
+
 	return std::unique_ptr<ImageDownloadHandle>(new ImageDownloadHandle(url, saveAs, 
-		Settings::getInstance()->getInt("ScraperResizeWidth"), Settings::getInstance()->getInt("ScraperResizeHeight")));
+		resize ? Settings::getInstance()->getInt("ScraperResizeWidth") : 0,
+		resize ? Settings::getInstance()->getInt("ScraperResizeHeight") : 0));
 }
 
 ImageDownloadHandle::ImageDownloadHandle(const std::string& url, const std::string& path, int maxWidth, int maxHeight) : 
 	mSavePath(path), mMaxWidth(maxWidth), mMaxHeight(maxHeight)
 {
-	mRequest = new HttpReq(url, path);
+	mRetryCount = 0;
+	mOverQuotaPendingTime = 0;
+
+	if (url.find("screenscraper") != std::string::npos && (path.find(".jpg") != std::string::npos || path.find(".png") != std::string::npos) && url.find("media=map") == std::string::npos)
+	{
+		if (maxWidth > 0 && maxHeight > 0)
+			mRequest = new HttpReq(url + "&maxwidth=" + std::to_string(maxWidth), path);
+		else if (maxWidth > 0)
+			mRequest = new HttpReq(url + "&maxwidth=" + std::to_string(maxWidth), path);
+		else if (maxHeight > 0)
+			mRequest = new HttpReq(url + "&maxheight=" + std::to_string(maxHeight), path);
+		else 
+			mRequest = new HttpReq(url, path);
+	}
+	else
+		mRequest = new HttpReq(url, path);
 }
 
 ImageDownloadHandle::~ImageDownloadHandle()
@@ -402,6 +372,23 @@ int ImageDownloadHandle::getPercent()
 
 void ImageDownloadHandle::update()
 {
+	if (mOverQuotaPendingTime > 0)
+	{
+		int lastTime = SDL_GetTicks();
+		if (lastTime - mOverQuotaPendingTime > OVERQUOTA_RETRY_DELAY)
+		{
+			mOverQuotaPendingTime = 0;
+
+			LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying";
+
+			std::string url = mRequest->getUrl();
+			delete mRequest;
+			mRequest = new HttpReq(url, mSavePath);
+		}
+
+		return;
+	}
+
 	HttpReq::Status status = mRequest->status();
 
 	if (status == HttpReq::REQ_IN_PROGRESS)
@@ -410,7 +397,7 @@ void ImageDownloadHandle::update()
 	if (status == HttpReq::REQ_429_TOOMANYREQUESTS)
 	{
 		mRetryCount++;
-		if (mRetryCount > 4)
+		if (mRetryCount >= OVERQUOTA_RETRY_COUNT)
 		{
 			setStatus(ASYNC_DONE); // Ignore error
 			return;
@@ -418,18 +405,11 @@ void ImageDownloadHandle::update()
 
 		setStatus(ASYNC_IN_PROGRESS);
 
-		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Wait before Retrying";
-
-		std::string url = mRequest->getUrl();
-		std::this_thread::sleep_for(std::chrono::seconds(mRetryCount < 3 ? 5 : 10));
-
-		delete mRequest;
-		mRequest = new HttpReq(url, mSavePath);
-
-		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying";
-
+		mOverQuotaPendingTime = SDL_GetTicks();
+		LOG(LogDebug) << "REQ_429_TOOMANYREQUESTS : Retrying in 5 seconds";
 		return;
 	}
+
 
 	// Ignored errors
 	if (status == HttpReq::REQ_404_NOTFOUND || status == HttpReq::REQ_IO_ERROR)
@@ -441,15 +421,48 @@ void ImageDownloadHandle::update()
 	// Blocking errors
 	if (status != HttpReq::REQ_SUCCESS)
 	{
-		setError(status, mRequest->getErrorMsg());
+		setError(status, Utils::String::removeHtmlTags(mRequest->getErrorMsg()));
 		return;
 	}
 
 	if (status == HttpReq::REQ_SUCCESS && mStatus == ASYNC_IN_PROGRESS)
 	{
-		// It's an image ?
 		std::string ext = Utils::String::toLower(Utils::FileSystem::getExtension(mSavePath));
-		if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || ext == ".gif")
+
+		// Make sure extension is the good one, according to the response 'content-type'
+		std::string contentType = mRequest->getResponseContentType();
+		if (!contentType.empty())
+		{
+			std::string trueExtension;
+			if (Utils::String::startsWith(contentType, "image/"))
+			{
+				trueExtension = "." + contentType.substr(6);
+				if (trueExtension == ".jpeg")
+					trueExtension = ".jpg";
+				else if (trueExtension == ".svg+xml")
+					trueExtension = ".svg";
+
+			}
+			else if (Utils::String::startsWith(contentType, "video/"))
+			{
+				trueExtension = "." + contentType.substr(6);
+				if (trueExtension == ".quicktime")
+					trueExtension = ".mov";
+			}
+
+			if (!trueExtension.empty() && trueExtension != ext)
+			{
+				auto newFileName = Utils::FileSystem::changeExtension(mSavePath, trueExtension);
+				if (Utils::FileSystem::renameFile(mSavePath, newFileName))
+				{
+					mSavePath = newFileName;
+					ext = trueExtension;
+				}
+			}
+		}
+
+		// It's an image ?
+		if (mSavePath.find("-fanart") == std::string::npos && mSavePath.find("-map") == std::string::npos && (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || ext == ".gif"))
 		{
 			try { resizeImage(mSavePath, mMaxWidth, mMaxHeight); }
 			catch(...) { }
@@ -533,25 +546,36 @@ bool resizeImage(const std::string& path, int maxWidth, int maxHeight)
 	return saved;
 }
 
-std::string getSaveAsPath(const ScraperSearchParams& params, const std::string& suffix, const std::string& extension)
+std::string Scraper::getSaveAsPath(FileData* game, const MetaDataId metadataId, const std::string& extension)
 {
-	const std::string subdirectory = params.system->getName();
-	const std::string name = Utils::FileSystem::getStem(params.game->getPath()) + "-" + suffix;
+	std::string suffix = "image";
+	std::string folder = "images";
 
-	std::string subFolder = "images";
-	if (suffix == "video")
-		subFolder = "videos";
+	switch (metadataId)
+	{
+	case MetaDataId::Thumbnail: suffix = "thumb"; break;
+	case MetaDataId::Marquee: suffix = "marquee"; break;
+	case MetaDataId::Video: suffix = "video"; folder = "videos"; break;
+	case MetaDataId::FanArt: suffix = "fanart"; break;
+	case MetaDataId::BoxBack: suffix = "boxback"; break;
+	case MetaDataId::BoxArt: suffix = "box"; break;
+	case MetaDataId::Wheel: suffix = "wheel"; break;
+	case MetaDataId::TitleShot: suffix = "titleshot"; break;
+	case MetaDataId::Manual: suffix = "manual"; folder = "manuals";  break;
+	case MetaDataId::Magazine: suffix = "magazine"; folder = "magazines"; break;
+	case MetaDataId::Map: suffix = "map"; break;
+	case MetaDataId::Cartridge: suffix = "cartridge"; break;
+	}
 
-	std::string path = params.system->getRootFolder()->getPath() + "/" + subFolder + "/"; // batocera
+	auto system = game->getSourceFileData()->getSystem();
+
+	const std::string subdirectory = system->getName();
+	const std::string name = Utils::FileSystem::getStem(game->getPath()) + "-" + suffix;
+
+	std::string path = system->getRootFolder()->getPath() + "/" + folder + "/";
 
 	if(!Utils::FileSystem::exists(path))
 		Utils::FileSystem::createDirectory(path);
-
-	// batocera
-	//path += subdirectory + "/";
-	//
-	//if(!Utils::FileSystem::exists(path))
-	//	Utils::FileSystem::createDirectory(path);
 
 	path += name + extension;
 	return path;

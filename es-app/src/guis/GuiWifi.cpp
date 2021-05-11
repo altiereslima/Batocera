@@ -11,7 +11,6 @@
 #include "guis/GuiTextEditPopupKeyboard.h"
 #include "GuiLoading.h"
 
-// Batocera install theBezelProject
 GuiWifi::GuiWifi(Window* window, const std::string title, std::string data, const std::function<void(std::string)>& onsave)
 	: GuiComponent(window), mMenu(window, title.c_str())
 {
@@ -24,11 +23,9 @@ GuiWifi::GuiWifi(Window* window, const std::string title, std::string data, cons
 
 	addChild(&mMenu);
 
-	ComponentListRow row;
-
 	std::vector<std::string> ssids = ApiSystem::getInstance()->getWifiNetworks();
 	if (ssids.empty())
-		mWindow->postToUiThread([this](Window*) { onRefresh(); });		
+		mWindow->postToUiThread([this]() { onRefresh(); });		
 	else
 		load(ssids);
 

@@ -3,6 +3,7 @@
 #define ES_APP_PLATFORM_ID_H
 
 #include <string>
+#include <map>
 
 namespace PlatformIds
 {
@@ -42,12 +43,15 @@ namespace PlatformIds
 		GAME_BOY,
 		GAME_BOY_ADVANCE,
 		GAME_BOY_COLOR,
+		SUPER_GAME_BOY,
 		NINTENDO_GAMECUBE,
 		NINTENDO_WII,
 		NINTENDO_WII_U,
+		NINTENDO_SWITCH,
 		NINTENDO_VIRTUAL_BOY,
 		NINTENDO_GAME_AND_WATCH,
 		PC,
+		PC_88,
 		PC_98,
 		SEGA_32X,
 		SEGA_CD,
@@ -64,8 +68,10 @@ namespace PlatformIds
 		PLAYSTATION_4,
 		PLAYSTATION_VITA,
 		PLAYSTATION_PORTABLE,
+		QUAKE,
 		SUPER_NINTENDO,
 		SCUMMVM,
+		SHARP_X1,
 		SHARP_X6800,
 		TURBOGRAFX_16, // (aka PC Engine) HuCards only
 		TURBOGRAFX_CD, // (aka PC Engine) CD-ROMs only
@@ -84,6 +90,8 @@ namespace PlatformIds
 		GX4000,
 		LUTRO,
 		MOONLIGHT,
+		MRBOOM,
+		CANNONBALL,
 		NAOMI,
 		NEOGEO_CD,
 		PCFX,
@@ -92,6 +100,9 @@ namespace PlatformIds
 		SATELLAVIEW,
 		SUFAMITURBO,
 		ZX81,
+		TIC80,
+		MODEL3,
+		IMAGEVIEWER,
 
 		// Windows Specific
 		VISUALPINBALL,
@@ -107,8 +118,25 @@ namespace PlatformIds
 		APPLE2GS,
 		SPECTRAVIDEO,
 		PALMOS,
-		DAPHNEE,
+		DAPHNE,
 		SOLARUS,
+		PICO8,
+		WATARA_SUPERVISION,
+
+		VIC20,
+		TI99,
+		SUPER_CASSETTE_VISION,
+		EASYRPG,
+		COMMODORE_PET,
+		ACORN_ATOM,
+		ACORN_BBC_MICRO,
+		ACORN_ELECTRON,		
+		NOKIA_NGAGE,
+		ASTROCADE,
+		ARCHIMEDES,
+		ADAM,
+		FMTOWNS,		
+		PHILIPS_CDI,
 
 		PLATFORM_IGNORE, // do not allow scraping for this system
 		PLATFORM_COUNT
@@ -116,6 +144,8 @@ namespace PlatformIds
 
 	PlatformId		getPlatformId(const char* str);
 	std::string		getPlatformName(PlatformId id);
+
+	extern std::map<unsigned short, std::pair<std::string, std::string>> ArcadeSystems;
 }
 
 #endif // ES_APP_PLATFORM_ID_H

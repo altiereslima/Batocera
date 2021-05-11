@@ -9,20 +9,19 @@
 #include <sstream>
 #include <vector>
 
+#ifdef WIN32
+#define INVERTEDINPUTCONFIG
+#endif
+
 namespace pugi { class xml_node; }
 
 #define DEVICE_KEYBOARD -1
 #define DEVICE_CEC      -2
 // batocera
-#define MAX_PLAYERS 5
+#define MAX_PLAYERS 8
 
-#ifdef WIN32
-#define BUTTON_OK	"a"
-#define BUTTON_BACK	"b"
-#else
-#define BUTTON_OK	"b"
-#define BUTTON_BACK	"a"
-#endif
+extern char* BUTTON_OK;
+extern char* BUTTON_BACK;
 
 enum InputType
 {
@@ -120,6 +119,7 @@ public:
 	inline int getDeviceNbButtons() const { return mDeviceNbButtons; }; // batocera
 	inline int getDeviceNbHats() const { return mDeviceNbHats; }; // batocera
 	inline int getDeviceNbAxes() const { return mDeviceNbAxes; }; // batocera
+	inline int getBatteryLevel() const { return mBatteryLevel; }; // batocera
 
 	//Returns true if Input is mapped to this name, false otherwise.
 	bool isMappedTo(const std::string& name, Input input, bool reversedAxis = false); // batocera
@@ -137,6 +137,11 @@ public:
 
 	bool isConfigured();
 
+	static std::string buttonLabel(const std::string& button);
+	static std::string buttonImage(const std::string& button);
+
+	void updateBatteryLevel(int level) { mBatteryLevel = level; }; // batocera
+
 private:
 	std::map<std::string, Input> mNameMap;
 	const int mDeviceId;
@@ -146,6 +151,11 @@ private:
 	const int mDeviceNbButtons; // number of buttons of the device // batocera
 	const int mDeviceNbHats;    // number of hats    of the device // batocera
 	const int mDeviceNbAxes;    // number of axes    of the device // batocera
+
+	int mBatteryLevel;
+
+public:
+	static void AssignActionButtons();
 };
 
 #endif // ES_CORE_INPUT_CONFIG_H

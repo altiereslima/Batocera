@@ -51,6 +51,8 @@ void AudioManager::init()
 	if (mInitialized)
 		return;
 	
+	mSongNameChanged = false;
+	mMusicVolume = 0;
 	mPlayingSystemThemeSong = "none";
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0)
@@ -156,7 +158,10 @@ void AudioManager::getMusicIn(const std::string &path, std::vector<std::string>&
 		else
 		{
 			std::string extension = Utils::String::toLower(Utils::FileSystem::getExtension(*it));
-			if (extension == ".mp3" || extension == ".ogg")
+			if (extension == ".mp3" || extension == ".ogg" || extension == ".flac"
+				|| extension == ".wav" || extension == ".mod" || extension == ".xm"
+				|| extension == ".stm" || extension == ".s3m" || extension == ".far"
+				|| extension == ".it" || extension == ".669" || extension == ".mtm")
 				all_matching_files.push_back(*it);
 		}
 	}
@@ -202,7 +207,7 @@ void AudioManager::playRandomMusic(bool continueIfPlaying)
 		return;
 
 	playMusic(musics.at(randomIndex));
-	setSongName(musics.at(randomIndex));
+	playSong(musics.at(randomIndex));
 	mPlayingSystemThemeSong = "";
 }
 
@@ -268,22 +273,107 @@ void AudioManager::stopMusic(bool fadeOut)
 	mCurrentMusic = NULL;
 }
 
-// batocera
-void AudioManager::setSongName(std::string song)
+// Fast string hash in order to use strings in switch/case
+// How does this work? Look for Dan Bernstein hash on the internet
+constexpr unsigned int sthash(const char *s, int off = 0)
 {
+	return !s[off] ? 5381 : (sthash(s, off+1)*33) ^ s[off];
+}
+
+void AudioManager::setSongName(const std::string& song)
+{
+	if (song == mCurrentSong)
+		return;
+
+	mCurrentSong = song;
+	mSongNameChanged = true;
+}
+
+// batocera
+void AudioManager::playSong(const std::string& song)
+{
+	if (song == mCurrentSong)
+		return;
+
 	if (song.empty())
 	{
+		mSongNameChanged = true;
 		mCurrentSong = "";
 		return;
 	}
 
-	if (song == mCurrentSong)
-		return;
-
 	std::string ext = Utils::String::toLower(Utils::FileSystem::getExtension(song));
+	// chiptunes mod song titles parsing
+	if (ext == ".mod" || ext == ".s3m" || ext == ".stm" || ext == ".669" || ext == ".mtm" || ext == ".far" || ext == ".xm" || ext == ".it" )
+	{
+		int title_offset;
+		int title_break;
+		struct {
+			char title[108] = "";
+		} info;
+		switch (sthash(ext.c_str())) {
+			case sthash(".mod"):
+			case sthash(".stm"):
+				title_offset = 0;
+				title_break = 20;
+				break;
+			case sthash(".s3m"):
+				title_offset = 0;
+				title_break = 28;
+				break;
+			case sthash(".669"):
+				title_offset = 0;
+				title_break = 108;
+				break;
+			case sthash(".mtm"):
+			case sthash(".it"):
+				title_offset = 4;
+				title_break = 20;
+				break;
+			case sthash(".far"):
+				title_offset = 4;
+				title_break = 40;
+				break;
+			case sthash(".xm"):
+				title_offset = 17;
+				title_break = 20;
+				break;
+			default:
+				LOG(LogError) << "Error AudioManager unexpected case while loading mofile " << song;
+				setSongName(Utils::FileSystem::getStem(song.c_str()));				
+				return;
+		}
+
+		FILE* file = fopen(song.c_str(), "r");
+		if (file != NULL)
+		{
+			if (fseek(file, title_offset, SEEK_SET) < 0)
+				LOG(LogError) << "Error AudioManager seeking " << song;
+			else if (fread(&info, sizeof(info), 1, file) != 1)
+				LOG(LogError) << "Error AudioManager reading " << song;
+			else  
+			{
+				info.title[title_break] = '\0';
+
+				std::string name = info.title;
+				if (!name.empty())
+				{
+					setSongName(name);
+					fclose(file);
+					return;
+				}
+			}
+
+			fclose(file);
+		}
+		else
+			LOG(LogError) << "Error AudioManager opening modfile " << song;
+	}
+
+	// now only mp3 will be parsed for ID3: .ogg, .wav and .flac will display file name
 	if (ext != ".mp3")
 	{
-		mCurrentSong = Utils::FileSystem::getStem(song.c_str());
+		setSongName(Utils::FileSystem::getStem(song.c_str()));
 		return;
 	}
 
@@ -308,7 +398,7 @@ void AudioManager::setSongName(std::string song)
 		else if (fread(&info, sizeof(info), 1, file) != 1)
 			LOG(LogError) << "Error AudioManager reading " << song;
 		else if (strncmp(info.tag, "TAG", 3) == 0) {
-			mCurrentSong = info.title;
+			setSongName(info.title);
 			fclose(file);
 			return;
 		}
@@ -316,7 +406,7 @@ void AudioManager::setSongName(std::string song)
 		fclose(file);
 	}
 	else
-		LOG(LogError) << "Error AudioManager opening " << song;
+		LOG(LogError) << "Error AudioManager opening mp3 file " << song;
 
 	// Then let's try with an ID3 v2 tag
 #define MAX_STR_SIZE 255 // Empiric max size of a MP3 title
@@ -335,14 +425,14 @@ void AudioManager::setSongName(std::string song)
 
 				if ((strlen(title_content->data) > 3) && (strlen(title_content->data) < MAX_STR_SIZE))
 				{
-					mCurrentSong = title_content->data;
+					setSongName(title_content->data);
 					return;
 				}
 			}
 		}
 	}
 
-	mCurrentSong = Utils::FileSystem::getStem(song.c_str());
+	setSongName(Utils::FileSystem::getStem(song.c_str()));
 }
 
 void AudioManager::changePlaylist(const std::shared_ptr<ThemeData>& theme, bool force)
@@ -377,8 +467,7 @@ void AudioManager::changePlaylist(const std::shared_ptr<ThemeData>& theme, bool 
 		if (!bgSound.empty())
 		{
 			mPlayingSystemThemeSong = bgSound;
-			playMusic(bgSound);
-			// setSongName(bgSound); ???
+			playMusic(bgSound);			
 			return;
 		}
 	}
@@ -398,6 +487,18 @@ void AudioManager::setVideoPlaying(bool state)
 	sInstance->mVideoPlaying = state;
 }
 
+int AudioManager::getMaxMusicVolume()
+{
+	int ret = (Settings::getInstance()->getInt("MusicVolume") * MIX_MAX_VOLUME) / 100;
+	if (ret > MIX_MAX_VOLUME)
+		return MIX_MAX_VOLUME;
+
+	if (ret < 0)
+		return 0;
+
+	return ret;
+}
+
 void AudioManager::update(int deltaTime)
 {
 	if (sInstance == nullptr || !sInstance->mInitialized || !Settings::getInstance()->getBool("audio.bgmusic"))
@@ -405,21 +506,34 @@ void AudioManager::update(int deltaTime)
 
 	float deltaVol = deltaTime / 8.0f;
 
-	#define MINVOL 5
+//	#define MINVOL 5
 
-	if (sInstance->mVideoPlaying && sInstance->mMusicVolume > MINVOL)
+	int maxVol = getMaxMusicVolume();
+	int minVol = maxVol / 20;
+	if (maxVol > 0 && minVol == 0)
+		minVol = 1;
+
+	if (sInstance->mVideoPlaying && sInstance->mMusicVolume != minVol)
 	{		
-		sInstance->mMusicVolume -= deltaVol;
-		if (sInstance->mMusicVolume < MINVOL)
-			sInstance->mMusicVolume = MINVOL;
+		if (sInstance->mMusicVolume > minVol)
+		{
+			sInstance->mMusicVolume -= deltaVol;
+			if (sInstance->mMusicVolume < minVol)
+				sInstance->mMusicVolume = minVol;
+		}
 
-		Mix_VolumeMusic((int) sInstance->mMusicVolume);
+		Mix_VolumeMusic((int)sInstance->mMusicVolume);
 	}
-	else if (!sInstance->mVideoPlaying && sInstance->mMusicVolume < MIX_MAX_VOLUME)
+	else if (!sInstance->mVideoPlaying && sInstance->mMusicVolume != maxVol)
 	{
-		sInstance->mMusicVolume += deltaVol;
-		if (sInstance->mMusicVolume > MIX_MAX_VOLUME)
-			sInstance->mMusicVolume = MIX_MAX_VOLUME;
+		if (sInstance->mMusicVolume < maxVol)
+		{
+			sInstance->mMusicVolume += deltaVol;
+			if (sInstance->mMusicVolume > maxVol)
+				sInstance->mMusicVolume = maxVol;
+		}
+		else
+			sInstance->mMusicVolume = maxVol;
 
 		Mix_VolumeMusic((int)sInstance->mMusicVolume);
 	}

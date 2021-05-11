@@ -51,7 +51,11 @@ public:
 	void stopMusic(bool fadeOut=true);
 	
 	inline const std::string getSongName() const { return mCurrentSong; }
-	void setSongName(std::string song); 
+
+	bool songNameChanged() { return mSongNameChanged; }
+	void resetSongNameChangedFlag() { mSongNameChanged = false; }
+	
+	inline bool isSongPlaying() { return (mCurrentMusic != NULL); }
 
 	void changePlaylist(const std::shared_ptr<ThemeData>& theme, bool force = false);
 
@@ -62,6 +66,14 @@ public:
 
 	static void setVideoPlaying(bool state);
 	static void update(int deltaTime);
+
+	static int getMaxMusicVolume();
+
+private:
+	void playSong(const std::string& song);
+	void setSongName(const std::string& song);
+
+	bool mSongNameChanged;
 };
 
 #endif // ES_CORE_AUDIO_MANAGER_H

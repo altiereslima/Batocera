@@ -30,14 +30,13 @@ public:
 
 	virtual std::vector<HelpPrompt> getHelpPrompts() override;
 	virtual void launch(FileData* game) override;
-
-protected:
 	virtual std::vector<FileData*> getFileDataEntries() override;
 
+protected:
 	virtual std::string getQuickSystemSelectRightButton() override;
 	virtual std::string getQuickSystemSelectLeftButton() override;
 	virtual void populateList(const std::vector<FileData*>& files) override;
-	virtual void remove(FileData* game, bool deleteFile) override;
+	virtual void remove(FileData* game) override;
 	virtual void addPlaceholder();
 
 	TextListComponent<FileData*> mList;

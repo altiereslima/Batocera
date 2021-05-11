@@ -12,6 +12,7 @@
 #include <vector>
 
 class TextCache;
+class TextureResource;
 
 #define FONT_SIZE_MINI ((unsigned int)(0.030f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
 #define FONT_SIZE_SMALL ((unsigned int)(0.035f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
@@ -35,6 +36,7 @@ enum Alignment
 	ALIGN_BOTTOM = 4
 };
 
+
 //A TrueType Font renderer that uses FreeType and OpenGL.
 //The library is automatically initialized when it's needed.
 class Font : public IReloadable
@@ -43,6 +45,7 @@ public:
 	static void initLibrary();
 
 	static std::shared_ptr<Font> get(int size, const std::string& path = getDefaultPath());
+	static void OnThemeChanged();
 
 	virtual ~Font();
 
@@ -79,8 +82,9 @@ private:
 
 	Font(int size, const std::string& path);
 
-	struct FontTexture
+	class FontTexture
 	{
+	public:
 		unsigned int textureId;
 		Vector2i textureSize;
 
@@ -106,9 +110,8 @@ private:
 	};
 
 	void rebuildTextures();
-	void unloadTextures();
 
-	std::vector<FontTexture> mTextures;
+	std::vector<FontTexture*> mTextures;
 
 	void getTextureForNewGlyph(const Vector2i& glyphSize, FontTexture*& tex_out, Vector2i& cursor_out);
 
@@ -125,6 +128,9 @@ private:
 
 		Vector2f advance;
 		Vector2f bearing;
+
+		Vector2i cursor;
+		Vector2i glyphSize;
 	};
 
 	Glyph* mGlyphCacheArray[255]; // used to cache 255 first chars
@@ -143,6 +149,16 @@ private:
 	friend TextCache;
 };
 
+struct TextImageSubstitute
+{
+	//Vector2f pos;
+	//Vector2f size;
+	// unsigned int character;
+
+	Renderer::Vertex vertex[4];
+	std::shared_ptr<TextureResource> texture;
+};
+
 // Used to store a sort of "pre-rendered" string.
 // When a TextCache is constructed (Font::buildTextCache()), the vertices and texture coordinates of the string are calculated and stored in the TextCache object.
 // Rendering a previously constructed TextCache (Font::renderTextCache) every frame is MUCH faster than rebuilding one every frame.
@@ -158,14 +174,22 @@ protected:
 	};
 
 	std::vector<VertexList> vertexLists;
+	std::vector<TextImageSubstitute> imageSubstitutes;
+	bool renderingGlow;
 
 public:
+	TextCache()
+	{
+		renderingGlow = false;
+	}
+
 	struct CacheMetrics
 	{
 		Vector2f size;
 	} metrics;
 
 	void setColor(unsigned int color);
+	void setRenderingGlow(bool glow) { renderingGlow = glow; }
 
 	friend Font;
 };

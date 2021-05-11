@@ -18,17 +18,19 @@ public:
 	{
 		GuiUpdate::state = GuiUpdateState::State::UPDATER_RUNNING;
 
-		mWndNotification = new AsyncNotificationComponent(window, false);
+		mWndNotification = mWindow->createAsyncNotificationComponent();
+#if WIN32
+		mWndNotification->updateTitle(_U("\uF019 ") + _("UPDATING EMULATIONSTATION"));
+#else
 		mWndNotification->updateTitle(_U("\uF019 ") + _("UPDATING BATOCERA"));
-
-		mWindow->registerNotificationComponent(mWndNotification);
+#endif
 		mHandle = new std::thread(&ThreadedUpdater::threadUpdate, this);
 	}
 
 	~ThreadedUpdater()
 	{
-		mWindow->unRegisterNotificationComponent(mWndNotification);
-		delete mWndNotification;
+		mWndNotification->close();
+		mWndNotification = nullptr;
 	}
 
 	void threadUpdate()
@@ -67,20 +69,6 @@ public:
 
 			std::this_thread::yield();
 			std::this_thread::sleep_for(std::chrono::hours(12));
-
-			/*
-			mWindow->postToUiThread([](Window* window)
-			{
-				window->pushGui(new GuiMsgBox(window, _("THE UPDATE IS READY. DO YOU WANT TO REBOOT THE SYSTEM NOW ?"), _("YES"), []
-				{
-#if defined(WIN32) && defined(_DEBUG)
-					quitES("");
-#else
-					if (runRestartCommand() != 0)
-						LOG(LogWarning) << "Reboot terminated with non-zero result!";
-#endif
-				}, _("LATER"), nullptr));
-			});*/
 		}
 		else
 		{

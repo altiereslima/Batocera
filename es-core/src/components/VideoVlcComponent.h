@@ -3,6 +3,7 @@
 #define ES_CORE_COMPONENTS_VIDEO_VLC_COMPONENT_H
 
 #include "VideoComponent.h"
+#include "ThemeData.h"
 #include <mutex>
 
 struct libvlc_instance_t;
@@ -79,7 +80,15 @@ public:
 
 	void	setColorShift(unsigned int color);
 
-	virtual void onHide() override;
+	virtual void onShow() override;
+
+	ThemeData::ThemeElement::Property getProperty(const std::string name) override;
+	void setProperty(const std::string name, const ThemeData::ThemeElement::Property& value) override;
+
+	void setEffect(VideoVlcFlags::VideoVlcEffect effect) { mEffect = effect; }
+
+	bool getLinearSmooth() { return mLinearSmooth; }
+	void setLinearSmooth(bool value = true) { mLinearSmooth = value; }
 
 private:
 	// Calculates the correct mSize from our resizing information (set by setResize/setMaxSize).
@@ -96,8 +105,6 @@ private:
 
 	void setupContext();
 	void freeContext();
-
-	void setEffect(VideoVlcFlags::VideoVlcEffect effect) { mEffect = effect; }
 
 private:
 	static libvlc_instance_t*		mVLC;
@@ -116,6 +123,8 @@ private:
 
 	int								mCurrentLoop;
 	int								mLoops;
+
+	bool							mLinearSmooth;
 };
 
 #endif // ES_CORE_COMPONENTS_VIDEO_VLC_COMPONENT_H
